@@ -15,7 +15,7 @@
             background: #0a0c16;
             font-family: system-ui, -apple-system, monospace;
             margin: 0;
-            padding: 6px;
+            padding: 8px;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -32,6 +32,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
+            width: 100%;
             box-shadow: 0 0 0 1px #2a3f55;
             overflow: hidden;
         }
@@ -45,6 +46,7 @@
             font-size: 0.65rem;
             font-weight: bold;
             border-bottom: 1px solid #1f3a4b;
+            flex-shrink: 0;
         }
         .stats-panel span { color: #f5bc70; }
         .enemy-panel {
@@ -56,6 +58,7 @@
             justify-content: space-between;
             font-weight: bold;
             font-size: 0.75rem;
+            flex-shrink: 0;
         }
         .chat {
             flex: 1;
@@ -66,6 +69,7 @@
             gap: 5px;
             background: #051020;
             font-size: 0.75rem;
+            min-height: 0;
         }
         .msg {
             background: #0f1a2c;
@@ -80,27 +84,35 @@
             background: #121e2e;
             border-left-color: #d6b356;
         }
-        /* ДВА РЯДА КНОПОК С ГОРИЗОНТАЛЬНОЙ ПРОКРУТКОЙ */
+        /* КНОПКИ ПОД ЧАТОМ, НАД ПОЛЕМ ВВОДА */
+        .buttons-area {
+            background: #030c17;
+            border-top: 1px solid #1a3045;
+            border-bottom: 1px solid #1a3045;
+            padding: 8px;
+            flex-shrink: 0;
+        }
         .buttons-row {
             display: flex;
-            overflow-x: auto;
             gap: 8px;
-            padding: 8px 10px;
-            background: #030c17;
-            scrollbar-width: thin;
-            -webkit-overflow-scrolling: touch;
+            justify-content: center;
+            margin-bottom: 6px;
+        }
+        .buttons-row:last-child {
+            margin-bottom: 0;
         }
         .buttons-row button {
             background: #1f3a52;
             border: none;
             color: white;
             font-weight: bold;
-            padding: 8px 14px;
+            padding: 8px 12px;
             border-radius: 40px;
             font-size: 0.7rem;
             cursor: pointer;
+            flex: 1;
+            text-align: center;
             white-space: nowrap;
-            flex-shrink: 0;
             transition: 0.05s linear;
         }
         .buttons-row button:active { transform: scale(0.96); background: #2c5a7a; }
@@ -111,6 +123,7 @@
             padding: 8px;
             background: #030c17;
             border-top: 1px solid #1a3045;
+            flex-shrink: 0;
         }
         input {
             flex: 1;
@@ -129,12 +142,13 @@
             margin: 5px 8px;
             border-radius: 20px;
             padding: 8px;
-            max-height: 240px;
+            max-height: 200px;
             overflow-y: auto;
+            flex-shrink: 0;
         }
         .class-selector { display: flex; gap: 12px; justify-content: center; margin: 10px; }
         .class-btn { background: #2a3f55; padding: 12px; flex: 1; text-align: center; border-radius: 60px; font-weight: bold; cursor: pointer; }
-        .select-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; max-height: 180px; overflow-y: auto; }
+        .select-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; max-height: 150px; overflow-y: auto; }
         .select-item { background: #162336; padding: 5px 8px; border-radius: 40px; cursor: pointer; margin: 2px; font-size: 0.7rem; }
         .craft-item { background: #162336; padding: 6px; border-radius: 16px; margin: 4px; cursor: pointer; }
         .craft-recipe { font-size: 0.6rem; color: #aac8ff; }
@@ -162,21 +176,24 @@
     <div class="chat" id="chatArea">
         <div class="msg system">🌀 Тысячи врат. Выбери класс.</div>
     </div>
+
     <div id="dynamicPanel" class="sub-panel hidden"></div>
 
-    <!-- ДВА РЯДА КНОПОК (все видны) -->
-    <div class="buttons-row" style="border-bottom: 1px solid #1a3045;">
-        <button id="questBtn">📜 КВЕСТЫ</button>
-        <button id="bossListBtn">👑 БОССЫ</button>
-        <button id="attackBtn">⚔️ АТАКА</button>
-        <button id="autoAttackBtn">🔄 АВТО</button>
-        <button id="healBtn">💚 ЛЕЧИТЬ</button>
-    </div>
-    <div class="buttons-row">
-        <button id="autoHealBtn">💊 АВТОХИЛ</button>
-        <button id="shopBtn">🏪 МАГАЗИН</button>
-        <button id="inventoryBtn">📦 ИНВЕНТАРЬ</button>
-        <button id="craftBtn">⚙️ КРАФТ</button>
+    <!-- КНОПКИ ЗДЕСЬ: ПОД ЧАТОМ, НАД ПОЛЕМ ВВОДА -->
+    <div class="buttons-area">
+        <div class="buttons-row">
+            <button id="questBtn">📜 КВЕСТЫ</button>
+            <button id="bossListBtn">👑 БОССЫ</button>
+            <button id="attackBtn">⚔️ АТАКА</button>
+            <button id="autoAttackBtn">🔄 АВТО</button>
+            <button id="healBtn">💚 ЛЕЧИТЬ</button>
+        </div>
+        <div class="buttons-row">
+            <button id="autoHealBtn">💊 АВТОХИЛ</button>
+            <button id="shopBtn">🏪 МАГАЗИН</button>
+            <button id="inventoryBtn">📦 ИНВЕНТАРЬ</button>
+            <button id="craftBtn">⚙️ КРАФТ</button>
+        </div>
     </div>
 
     <div class="input-area">
