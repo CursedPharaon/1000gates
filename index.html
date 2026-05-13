@@ -2,21 +2,27 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>RPG | Тычячи врат</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Тысячи врат: Текстовая RPG</title>
     <style>
         * {
             box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         body {
             background: #0a0c16;
-            font-family: -apple-system, system-ui, monospace;
+            font-family: system-ui, -apple-system, monospace;
             margin: 0;
-            padding: 10px;
+            padding: 8px;
             height: 100vh;
             display: flex;
             flex-direction: column;
             color: #eef4ff;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
         }
         .game-container {
             max-width: 700px;
@@ -25,291 +31,404 @@
             border-radius: 32px;
             display: flex;
             flex-direction: column;
-            height: 98%;
+            height: 100%;
             box-shadow: 0 0 0 1px #2a3f55;
             overflow: hidden;
         }
-        .stats {
+        .stats-panel {
             background: #010a17;
-            padding: 10px 14px;
+            padding: 10px 12px;
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 8px;
             justify-content: space-between;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: bold;
             border-bottom: 1px solid #1f3a4b;
         }
-        .stats span {
-            color: #f5bc70;
+        .stats-panel span { color: #f5bc70; }
+        .enemy-panel {
+            background: #0d1a2a;
+            padding: 8px;
+            margin: 6px 10px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 0.8rem;
         }
         .chat {
             flex: 1;
             overflow-y: auto;
-            padding: 14px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 6px;
             background: #051020;
+            font-size: 0.8rem;
         }
         .msg {
             background: #0f1a2c;
-            padding: 8px 14px;
-            border-radius: 20px;
+            padding: 6px 10px;
+            border-radius: 18px;
             word-wrap: break-word;
-            font-size: 0.9rem;
-            border-left: 4px solid #4c7a9a;
+            border-left: 3px solid #4c7a9a;
             align-self: flex-start;
-            max-width: 92%;
+            max-width: 94%;
         }
         .msg.system {
             background: #121e2e;
             border-left-color: #d6b356;
-            font-family: monospace;
         }
-        .input-area {
-            background: #081220;
-            padding: 10px;
+        .bottom-buttons {
             display: flex;
-            gap: 8px;
-            border-top: 1px solid #1f4162;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: #030c17;
+            padding: 8px;
+        }
+        .bottom-buttons button {
+            background: #1f3a52;
+            border: none;
+            color: white;
+            font-weight: bold;
+            padding: 8px 6px;
+            border-radius: 40px;
+            font-size: 0.65rem;
+            cursor: pointer;
+            flex: 1;
+            min-width: 65px;
+            transition: 0.05s linear;
+        }
+        .bottom-buttons button:active { transform: scale(0.96); background: #2c5a7a; }
+        .active-mode { background: #4c7a9a !important; box-shadow: 0 0 6px #7ab3c8; }
+        .input-area {
+            display: flex;
+            gap: 6px;
+            padding: 8px;
+            background: #030c17;
+            border-top: 1px solid #1a3045;
         }
         input {
             flex: 1;
             background: #0f1b2f;
             border: none;
-            padding: 12px 16px;
-            border-radius: 60px;
+            padding: 10px 14px;
+            border-radius: 40px;
             color: white;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             outline: none;
         }
-        button {
-            background: #2c4f6e;
-            border: none;
-            padding: 0 20px;
-            border-radius: 60px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
+        button { background: #2c4f6e; border: none; color: white; padding: 8px 16px; border-radius: 40px; cursor: pointer; }
+        .hidden { display: none; }
+        .sub-panel {
+            background: #0a1424;
+            margin: 5px 10px;
+            border-radius: 24px;
+            padding: 10px;
+            max-height: 260px;
+            overflow-y: auto;
         }
-        .hint {
-            font-size: 0.65rem;
-            text-align: center;
-            padding: 6px;
-            color: #6f8eae;
-        }
+        .class-selector { display: flex; gap: 12px; justify-content: center; margin: 10px; }
+        .class-btn { background: #2a3f55; padding: 12px; flex: 1; text-align: center; border-radius: 60px; font-weight: bold; cursor: pointer; }
+        .select-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 200px; overflow-y: auto; }
+        .select-item { background: #162336; padding: 6px 10px; border-radius: 40px; cursor: pointer; margin: 2px; font-size: 0.75rem; }
+        .craft-item { background: #162336; padding: 8px; border-radius: 20px; margin: 4px; cursor: pointer; }
+        .craft-recipe { font-size: 0.65rem; color: #aac8ff; }
+        .craft-damage { font-size: 0.7rem; color: #ffaa66; font-weight: bold; margin-left: 8px; }
+        .shop-item { background: #162336; padding: 6px 10px; border-radius: 40px; margin: 3px; cursor: pointer; font-size: 0.7rem; display: flex; justify-content: space-between; }
+        hr { border-color: #2e4b6e; margin: 6px; }
     </style>
 </head>
 <body>
 <div class="game-container">
-    <div class="stats">
-        <div>⚔️ УРОВЕНЬ <span id="lvl">1</span></div>
-        <div>⭐ ОПЫТ <span id="xpCur">0</span>/<span id="xpMax">100</span></div>
-        <div>❤️ HP <span id="hp">140</span>/<span id="maxHp">140</span></div>
-        <div>🪙 ЗОЛОТО <span id="gold">400</span></div>
-        <div>💪 СИЛ <span id="pCount">0</span></div>
+    <div class="stats-panel">
+        <div>⚔️ <span id="className">???</span> | Ур.<span id="lvl">1</span></div>
+        <div>❤️ <span id="hp">200</span>/<span id="maxHp">200</span></div>
+        <div>💙 <span id="mp">50</span>/<span id="maxMp">50</span></div>
+        <div>🪙 <span id="gold">800</span></div>
+        <div>⚡ УРН <span id="dmgStat">20</span></div>
+        <div>🔑 <span id="keyCount">0</span></div>
     </div>
+    <div class="enemy-panel" id="enemyPanel" style="display: none;">
+        <span>👾 <span id="enemyName">Гоблин</span></span>
+        <span>❤️ <span id="enemyHp">120</span></span>
+        <span>⚔️ <span id="enemyAtk">28</span></span>
+    </div>
+
     <div class="chat" id="chatArea">
-        <div class="msg system">✨ Добро пожаловать в RPG: Тысячи врат.</div>
-        <div class="msg system">📜 <strong>помощь</strong> — список команд.</div>
+        <div class="msg system">🌀 Тысячи врат. Выбери класс.</div>
+    </div>
+    <div id="dynamicPanel" class="sub-panel hidden"></div>
+
+    <div class="bottom-buttons">
+        <button id="questBtn">📜 КВЕСТЫ</button>
+        <button id="bossListBtn">👑 БОССЫ</button>
+        <button id="attackBtn">⚔️ АТАКА</button>
+        <button id="autoAttackBtn">🔄 АВТО</button>
+        <button id="healBtn">💚 ЛЕЧИТЬ</button>
+        <button id="autoHealBtn">💊 АВТОХИЛ</button>
+        <button id="shopBtn">🏪 МАГАЗИН</button>
+        <button id="inventoryBtn">📦 ИНВЕНТАРЬ</button>
+        <button id="craftBtn">⚙️ КРАФТ</button>
     </div>
     <div class="input-area">
-        <input type="text" id="cmdInput" placeholder="команда..." autocomplete="off">
+        <input type="text" id="cmdInput" placeholder="статы, помощь..." autocomplete="off">
         <button id="sendBtn">➤</button>
     </div>
-    <div class="hint">квесты | боссы | атака | лечить | кейс | магазин | инвентарь</div>
 </div>
 
 <script>
-    // ---------- СИЛЫ (20 штук) ----------
-    const POWERS = [
-        { id: "p1", name: "🗡️ Кинжал новичка", rarity: "common", bonus: 6, cost: 100, source: "shop" },
-        { id: "p2", name: "🛡️ Деревянный щит", rarity: "common", bonus: 8, cost: 130, source: "shop" },
-        { id: "p3", name: "🏹 Короткий лук", rarity: "common", bonus: 10, cost: 160, source: "shop" },
-        { id: "p4", name: "🧤 Рукавицы силы", rarity: "common", bonus: 7, cost: 110, source: "shop" },
-        { id: "p5", name: "👢 Быстрые сапоги", rarity: "common", bonus: 5, cost: 90, source: "shop" },
-        { id: "p6", name: "⚡ Громовой клинок", rarity: "rare", bonus: 22, cost: 450, source: "shop" },
-        { id: "p7", name: "❄️ Ледяное сердце", rarity: "rare", bonus: 25, cost: 500, source: "shop" },
-        { id: "p8", name: "🔥 Пламенный тотем", rarity: "rare", bonus: 24, cost: 480, source: "shop" },
-        { id: "p9", name: "🌪️ Клинок вихря", rarity: "rare", bonus: 28, cost: 560, source: "shop" },
-        { id: "p10", name: "👑 Корона теней", rarity: "rare", bonus: 20, cost: 420, source: "shop" },
-        { id: "p11", name: "⭐ Световой меч порядка", rarity: "epic", bonus: 55, cost: 0, source: "boss:Ангел Света" },
-        { id: "p12", name: "🌙 Пассивка теней", rarity: "epic", bonus: 48, cost: 0, source: "boss:Владыка тьмы" },
-        { id: "p13", name: "💀 Череп лича", rarity: "epic", bonus: 52, cost: 0, source: "boss:Лич Некромант" },
-        { id: "p14", name: "⚜️ Крылья феникса", rarity: "epic", bonus: 60, cost: 0, source: "boss:Феникс" },
-        { id: "p15", name: "🐉 Дыхание древнего", rarity: "epic", bonus: 74, cost: 2200, source: "shop" },
-        { id: "p16", name: "🌀 Меч тысячелетия", rarity: "epic", bonus: 68, cost: 0, source: "boss:Древний воин" },
-        { id: "p17", name: "🕯️ Свеча забвения", rarity: "rare", bonus: 30, cost: 0, source: "boss:Призрачный огонь" },
-        { id: "p18", name: "💎 Пассивка стойкости", rarity: "epic", bonus: 44, cost: 0, source: "boss:Каменный голем" },
-        { id: "p19", name: "⚔️ Ультра-меч рассвета", rarity: "legend", bonus: 95, cost: 0, source: "boss:Бог Рассвета" },
-        { id: "p20", name: "🌑 Клинок бездны", rarity: "legend", bonus: 98, cost: 0, source: "boss:Повелитель бездны" }
-    ];
+    const SECRET_BOSS_COMMAND = "открой врата";
 
-    // КВЕСТЫ
-    const QUESTS = [
-        { name: "Гоблин-разбойник", baseHp: 80, baseAtk: 18, xpRew: 28, goldMin: 40, goldMax: 85, dropChance: 0.25, dropPool: ["common"] },
-        { name: "Лесной волк", baseHp: 110, baseAtk: 26, xpRew: 38, goldMin: 60, goldMax: 120, dropChance: 0.3, dropPool: ["common"] },
-        { name: "Скелет-воин", baseHp: 160, baseAtk: 35, xpRew: 50, goldMin: 85, goldMax: 170, dropChance: 0.35, dropPool: ["common","rare"] },
-        { name: "Тролль-берсерк", baseHp: 240, baseAtk: 48, xpRew: 70, goldMin: 130, goldMax: 240, dropChance: 0.4, dropPool: ["common","rare"] },
-        { name: "Огненный элементаль", baseHp: 340, baseAtk: 68, xpRew: 95, goldMin: 190, goldMax: 340, dropChance: 0.45, dropPool: ["rare"] }
-    ];
-
-    // БОССЫ
-    const BOSS_LIST = [
-        { id: 0, name: "🍄 Грибной король", tier: "малый", baseHp: 300, baseAtk: 45, goldMin: 200, goldMax: 380, drops: [{ powerId: "p17", chance: 0.5 },{ powerId: "p2", chance: 0.4 }] },
-        { id: 1, name: "🗿 Каменный голем", tier: "средний", baseHp: 680, baseAtk: 78, goldMin: 420, goldMax: 700, drops: [{ powerId: "p18", chance: 0.55 },{ powerId: "p4", chance: 0.5 },{ powerId: "p6", chance: 0.3 }] },
-        { id: 2, name: "👻 Призрачный огонь", tier: "средний", baseHp: 950, baseAtk: 105, goldMin: 600, goldMax: 980, drops: [{ powerId: "p17", chance: 0.6 },{ powerId: "p9", chance: 0.45 }] },
-        { id: 3, name: "🦴 Лич Некромант", tier: "жестокий", baseHp: 1550, baseAtk: 150, goldMin: 1000, goldMax: 1650, drops: [{ powerId: "p13", chance: 0.7 },{ powerId: "p7", chance: 0.6 },{ powerId: "p10", chance: 0.5 }] },
-        { id: 4, name: "🔥 Феникс", tier: "жестокий", baseHp: 2200, baseAtk: 210, goldMin: 1500, goldMax: 2400, drops: [{ powerId: "p14", chance: 0.7 },{ powerId: "p8", chance: 0.65 },{ powerId: "p19", chance: 0.2 }] },
-        { id: 5, name: "😈 Владыка тьмы", tier: "легендарный", baseHp: 3800, baseAtk: 320, goldMin: 2800, goldMax: 4300, drops: [{ powerId: "p12", chance: 0.8 },{ powerId: "p15", chance: 0.7 },{ powerId: "p20", chance: 0.25 }] },
-        { id: 6, name: "⚜️ Ангел Света", tier: "легендарный", baseHp: 4700, baseAtk: 390, goldMin: 3600, goldMax: 5600, drops: [{ powerId: "p11", chance: 0.85 },{ powerId: "p16", chance: 0.75 },{ powerId: "p14", chance: 0.5 }] },
-        { id: 7, name: "🐉 Древний воин", tier: "мифический", baseHp: 6900, baseAtk: 550, goldMin: 6000, goldMax: 9200, drops: [{ powerId: "p16", chance: 1.0 },{ powerId: "p19", chance: 0.7 },{ powerId: "p20", chance: 0.6 }] },
-        { id: 8, name: "🌞 Бог Рассвета", tier: "мифический", baseHp: 10500, baseAtk: 820, goldMin: 9500, goldMax: 14500, drops: [{ powerId: "p19", chance: 1.0 },{ powerId: "p11", chance: 0.9 },{ powerId: "p14", chance: 0.8 }] },
-        { id: 9, name: "🌀 Повелитель бездны", tier: "космический", baseHp: 16000, baseAtk: 1250, goldMin: 15000, goldMax: 23000, drops: [{ powerId: "p20", chance: 1.0 },{ powerId: "p12", chance: 0.9 },{ powerId: "p19", chance: 0.8 },{ powerId: "p15", chance: 0.95 }] }
-    ];
-
-    let player = {
-        level: 1, xp: 0, gold: 400, hp: 140, maxHp: 140,
-        inventory: ["p1"],
-        currentEnemy: null,
-        enemyType: null,
-        bossIndex: 0,
-        questIndex: 0,
-        secretFlags: { phoenixUsed: false, mapUsed: false, dawnUsed: false, abyssUsed: false }
+    // ========== 20 ПРЕДМЕТОВ В МАГАЗИНЕ ДЛЯ КАЖДОГО КЛАССА ==========
+    const WEAPONS = {
+        warrior: [
+            { name: "⚔️ Ржавый меч", dmg: 12, cost: 0 },
+            { name: "🛡️ Стальной клинок", dmg: 22, cost: 400 },
+            { name: "🗡️ Меч ветра", dmg: 32, cost: 850 },
+            { name: "🔥 Пламенный топор", dmg: 42, cost: 1350 },
+            { name: "❄️ Ледяной рассекатель", dmg: 52, cost: 1950 },
+            { name: "⚡ Громовой меч", dmg: 62, cost: 2650 },
+            { name: "💀 Жнец душ", dmg: 75, cost: 3500 },
+            { name: "🌋 Рунический топор", dmg: 88, cost: 4600 },
+            { name: "🐉 Драконий гнев", dmg: 102, cost: 5900 },
+            { name: "⚜️ Клинок Тысячи битв", dmg: 118, cost: 7500 },
+            { name: "🌀 Клинок Хаоса", dmg: 135, cost: 9500 },
+            { name: "🌑 Эфирный меч", dmg: 155, cost: 12000 },
+            { name: "✨ Светозарный клинок", dmg: 178, cost: 15000 },
+            { name: "💎 Алмазный топор", dmg: 205, cost: 19000 },
+            { name: "⚡ Громовой раскол", dmg: 235, cost: 24000 },
+            { name: "🌋 Рагнарёк", dmg: 270, cost: 30000 },
+            { name: "👑 Королевский меч", dmg: 310, cost: 38000 },
+            { name: "🌀 Клинок бездны", dmg: 360, cost: 48000 },
+            { name: "⭐ Звёздный меч", dmg: 420, cost: 60000 },
+            { name: "🌌 Артефакт воина", dmg: 500, cost: 80000 }
+        ],
+        mage: [
+            { name: "🔮 Деревянный посох", dmg: 10, cost: 0 },
+            { name: "🔥 Жезл огня", dmg: 20, cost: 400 },
+            { name: "❄️ Ледяная сфера", dmg: 30, cost: 850 },
+            { name: "⚡ Грозовой жезл", dmg: 40, cost: 1350 },
+            { name: "🌙 Посох луны", dmg: 50, cost: 1950 },
+            { name: "💀 Череп некроманта", dmg: 62, cost: 2650 },
+            { name: "🐉 Дыхание дракона", dmg: 76, cost: 3500 },
+            { name: "🌀 Кристалл бури", dmg: 90, cost: 4600 },
+            { name: "✨ Книга магии", dmg: 106, cost: 5900 },
+            { name: "🌋 Вулканический посох", dmg: 124, cost: 7500 },
+            { name: "🌌 Космический жезл", dmg: 144, cost: 9500 },
+            { name: "⚡ Посох бога", dmg: 168, cost: 12000 },
+            { name: "❄️ Ледяная корона", dmg: 195, cost: 15000 },
+            { name: "🔥 Пламя феникса", dmg: 225, cost: 19000 },
+            { name: "🌀 Кристалл бездны", dmg: 260, cost: 24000 },
+            { name: "🌙 Лунный артефакт", dmg: 300, cost: 30000 },
+            { name: "⭐ Звёздный скипетр", dmg: 350, cost: 38000 },
+            { name: "💀 Скрижаль смерти", dmg: 410, cost: 48000 },
+            { name: "🌋 Сердце вулкана", dmg: 480, cost: 60000 },
+            { name: "🌀 Артефакт мага", dmg: 580, cost: 80000 }
+        ],
+        archer: [
+            { name: "🏹 Короткий лук", dmg: 11, cost: 0 },
+            { name: "🌪️ Ветреный арбалет", dmg: 21, cost: 400 },
+            { name: "🔥 Огненный лук", dmg: 31, cost: 850 },
+            { name: "❄️ Ледяная стрела", dmg: 41, cost: 1350 },
+            { name: "⚡ Громовой арбалет", dmg: 51, cost: 1950 },
+            { name: "💀 Лук смерти", dmg: 63, cost: 2650 },
+            { name: "🐉 Укус виверны", dmg: 77, cost: 3500 },
+            { name: "🌀 Стрела хаоса", dmg: 92, cost: 4600 },
+            { name: "✨ Небесный лук", dmg: 108, cost: 5900 },
+            { name: "⚜️ Лук Тысячи битв", dmg: 126, cost: 7500 },
+            { name: "🌙 Лунный арбалет", dmg: 146, cost: 9500 },
+            { name: "💎 Алмазный лук", dmg: 170, cost: 12000 },
+            { name: "🌀 Лук бездны", dmg: 198, cost: 15000 },
+            { name: "🔥 Драконий лук", dmg: 230, cost: 19000 },
+            { name: "⚡ Громовой лук", dmg: 268, cost: 24000 },
+            { name: "⭐ Звёздный лук", dmg: 312, cost: 30000 },
+            { name: "🌋 Вулканический лук", dmg: 365, cost: 38000 },
+            { name: "💀 Лук жнеца", dmg: 425, cost: 48000 },
+            { name: "🌀 Хаотический лук", dmg: 495, cost: 60000 },
+            { name: "🌌 Артефакт лучника", dmg: 590, cost: 80000 }
+        ]
     };
 
-    function recalcBonus() { return player.inventory.reduce((sum, pid) => { let p = POWERS.find(x => x.id === pid); return sum + (p ? p.bonus : 0); }, 0); }
-    function getAttack() { return 12 + player.level * 2 + recalcBonus(); }
-    function updateUI() {
-        let need = 80 + player.level * 7;
-        document.getElementById("lvl").innerText = player.level;
-        document.getElementById("xpCur").innerText = player.xp;
-        document.getElementById("xpMax").innerText = need;
-        document.getElementById("hp").innerText = player.hp;
-        document.getElementById("maxHp").innerText = player.maxHp;
-        document.getElementById("gold").innerText = Math.floor(player.gold);
-        document.getElementById("pCount").innerText = player.inventory.length;
+    // КВЕСТЫ (12)
+    const QUESTS = [
+        { name: "Лесной гоблин", hp: 160, atk: 28, gold: 90, xp: 45, key: "Медный ключ", keyChance: 0.6 },
+        { name: "Каменный тролль", hp: 290, atk: 42, gold: 150, xp: 80, key: "Серебряный ключ", keyChance: 0.55 },
+        { name: "Теневой рыцарь", hp: 450, atk: 65, gold: 240, xp: 130, key: "Золотой ключ", keyChance: 0.5 },
+        { name: "Огненный элементаль", hp: 680, atk: 88, gold: 370, xp: 190, key: "Пламенный ключ", keyChance: 0.45 },
+        { name: "Ледяной великан", hp: 920, atk: 115, gold: 520, xp: 260, key: "Ледяной ключ", keyChance: 0.4 },
+        { name: "Древний вампир", hp: 1250, atk: 150, gold: 740, xp: 350, key: "Кровавый ключ", keyChance: 0.35 },
+        { name: "Хаотичный маг", hp: 1650, atk: 195, gold: 980, xp: 460, key: "Магический ключ", keyChance: 0.3 },
+        { name: "Каменный голем", hp: 2100, atk: 240, gold: 1300, xp: 600, key: "Рунический ключ", keyChance: 0.25 },
+        { name: "Призрачный король", hp: 2700, atk: 300, gold: 1750, xp: 780, key: "Призрачный ключ", keyChance: 0.2 },
+        { name: "Дракон пустыни", hp: 3500, atk: 380, gold: 2350, xp: 1000, key: "Драконий ключ", keyChance: 0.15 },
+        { name: "Архидемон", hp: 4600, atk: 490, gold: 3200, xp: 1350, key: "Адский ключ", keyChance: 0.1 },
+        { name: "Ангел смерти", hp: 6200, atk: 650, gold: 4500, xp: 1850, key: "Небесный ключ", keyChance: 0.08 }
+    ];
+
+    // ОБЫЧНЫЕ БОССЫ (12)
+    const NORMAL_BOSSES = [
+        { name: "🗿 Каменный страж", hp: 800, atk: 70, gold: 500, xp: 250, drops: [{ material: "Осколок магмы", qty: 2, chance: 1.0 }] },
+        { name: "❄️ Ледяной дух", hp: 1200, atk: 95, gold: 750, xp: 380, drops: [{ material: "Ледяной осколок", qty: 2, chance: 1.0 }] },
+        { name: "🔥 Огненный голем", hp: 1800, atk: 130, gold: 1100, xp: 550, drops: [{ material: "Рунический камень", qty: 1, chance: 0.8 }, { material: "Осколок магмы", qty: 3, chance: 1.0 }] },
+        { name: "🌪️ Владыка ветра", hp: 2600, atk: 180, gold: 1600, xp: 800, drops: [{ material: "Древний пергамент", qty: 2, chance: 0.9 }] },
+        { name: "💀 Могильный рыцарь", hp: 3600, atk: 240, gold: 2300, xp: 1150, drops: [{ material: "Теневые нити", qty: 2, chance: 1.0 }] },
+        { name: "🌙 Лунный жрец", hp: 4800, atk: 320, gold: 3200, xp: 1600, drops: [{ material: "Лунная пыль", qty: 3, chance: 1.0 }] },
+        { name: "⚡ Громовой титан", hp: 6400, atk: 420, gold: 4500, xp: 2200, drops: [{ material: "Рунический камень", qty: 3, chance: 1.0 }, { material: "Древний пергамент", qty: 2, chance: 0.7 }] },
+        { name: "🐉 Пустынный дракон", hp: 8500, atk: 550, gold: 6200, xp: 3000, drops: [{ material: "Осколок магмы", qty: 5, chance: 1.0 }, { material: "Ледяной осколок", qty: 3, chance: 0.8 }] },
+        { name: "👑 Король скелетов", hp: 11000, atk: 720, gold: 8500, xp: 4100, drops: [{ material: "Эссенция тьмы", qty: 2, chance: 1.0 }, { material: "Теневые нити", qty: 4, chance: 1.0 }] },
+        { name: "🌀 Архидемон", hp: 14500, atk: 940, gold: 12000, xp: 5600, drops: [{ material: "Эссенция тьмы", qty: 4, chance: 1.0 }, { material: "Рунический камень", qty: 4, chance: 0.9 }] },
+        { name: "✨ Ангел света", hp: 19000, atk: 1250, gold: 17000, xp: 7800, drops: [{ material: "Лунная пыль", qty: 6, chance: 1.0 }, { material: "Древний пергамент", qty: 5, chance: 1.0 }] },
+        { name: "🐉 Изначальный дракон", hp: 26000, atk: 1650, gold: 25000, xp: 11500, drops: [{ material: "Осколок магмы", qty: 8, chance: 1.0 }, { material: "Рунический камень", qty: 6, chance: 1.0 }] }
+    ];
+
+    // ЭЛИТНЫЕ БОССЫ (требуют ключи)
+    const ELITE_BOSSES = [
+        { name: "🔥 Владыка магмы", needKey: "Медный ключ", hp: 1400, atk: 110, gold: 1000, xp: 500, drops: [{ material: "Осколок магмы", qty: 5, chance: 1.0 }, { weapon: "🌋 Рунический топор", class: "warrior", chance: 0.05 }] },
+        { name: "❄️ Ледяной дракон", needKey: "Серебряный ключ", hp: 2500, atk: 170, gold: 1800, xp: 850, drops: [{ material: "Ледяной осколок", qty: 5, chance: 1.0 }, { weapon: "❄️ Ледяная сфера", class: "mage", chance: 0.05 }] },
+        { name: "🌙 Хранитель луны", needKey: "Золотой ключ", hp: 4000, atk: 250, gold: 2800, xp: 1300, drops: [{ material: "Лунная пыль", qty: 6, chance: 1.0 }, { weapon: "🌙 Посох луны", class: "mage", chance: 0.06 }] },
+        { name: "⚡ Повелитель бури", needKey: "Пламенный ключ", hp: 5800, atk: 350, gold: 4200, xp: 1900, drops: [{ material: "Рунический камень", qty: 6, chance: 1.0 }, { weapon: "⚡ Грозовой жезл", class: "mage", chance: 0.07 }] },
+        { name: "💀 Лич Некромант", needKey: "Ледяной ключ", hp: 8000, atk: 480, gold: 6200, xp: 2700, drops: [{ material: "Теневые нити", qty: 7, chance: 1.0 }, { material: "Эссенция тьмы", qty: 3, chance: 0.9 }, { weapon: "💀 Жнец душ", class: "warrior", chance: 0.08 }] },
+        { name: "🗡️ Теневой клинок", needKey: "Кровавый ключ", hp: 10500, atk: 640, gold: 8500, xp: 3700, drops: [{ material: "Теневые нити", qty: 8, chance: 1.0 }, { weapon: "💀 Лук смерти", class: "archer", chance: 0.09 }] },
+        { name: "🧙 Магистр хаоса", needKey: "Магический ключ", hp: 14000, atk: 840, gold: 11500, xp: 5000, drops: [{ material: "Древний пергамент", qty: 6, chance: 1.0 }, { weapon: "🐉 Дыхание дракона", class: "mage", chance: 0.1 }] },
+        { name: "🏔️ Горный титан", needKey: "Рунический ключ", hp: 18500, atk: 1100, gold: 16000, xp: 6800, drops: [{ material: "Рунический камень", qty: 8, chance: 1.0 }, { weapon: "⚜️ Клинок Тысячи битв", class: "warrior", chance: 0.12 }] }
+    ];
+
+    // КРАФТЫ (по 10 на класс) С УКАЗАНИЕМ УРОНА
+    function getCraftsByClass(className) {
+        if (className === "warrior") return [
+            { name: "🌋 Рунический топор", weaponName: "🌋 Рунический топор", dmg: 88, items: [{ name: "Осколок магмы", qty: 5 }, { name: "Рунический камень", qty: 3 }] },
+            { name: "💀 Жнец душ", weaponName: "💀 Жнец душ", dmg: 75, items: [{ name: "Теневые нити", qty: 6 }, { name: "Эссенция тьмы", qty: 3 }] },
+            { name: "⚜️ Клинок Тысячи битв", weaponName: "⚜️ Клинок Тысячи битв", dmg: 118, items: [{ name: "Древний пергамент", qty: 4 }, { name: "Рунический камень", qty: 5 }] },
+            { name: "❄️ Ледяной рассекатель", weaponName: "❄️ Ледяной рассекатель", dmg: 52, items: [{ name: "Ледяной осколок", qty: 8 }, { name: "Древний пергамент", qty: 2 }] },
+            { name: "🔥 Пламенный топор", weaponName: "🔥 Пламенный топор", dmg: 42, items: [{ name: "Осколок магмы", qty: 7 }, { name: "Ледяной осколок", qty: 4 }] },
+            { name: "⚡ Громовой раскол", weaponName: "⚡ Громовой раскол", dmg: 235, items: [{ name: "Рунический камень", qty: 6 }, { name: "Эссенция тьмы", qty: 2 }] },
+            { name: "🌑 Эфирный меч", weaponName: "🌑 Эфирный меч", dmg: 155, items: [{ name: "Теневые нити", qty: 8 }, { name: "Лунная пыль", qty: 5 }] },
+            { name: "🌀 Клинок Хаоса", weaponName: "🌀 Клинок Хаоса", dmg: 135, items: [{ name: "Эссенция тьмы", qty: 7 }, { name: "Рунический камень", qty: 8 }] },
+            { name: "🛡️ Стальной клинок+", weaponName: "🛡️ Стальной клинок", dmg: 22, items: [{ name: "Осколок магмы", qty: 3 }, { name: "Рунический камень", qty: 1 }] },
+            { name: "🗡️ Меч ветра+", weaponName: "🗡️ Меч ветра", dmg: 32, items: [{ name: "Ледяной осколок", qty: 5 }, { name: "Древний пергамент", qty: 1 }] }
+        ];
+        if (className === "mage") return [
+            { name: "🌙 Посох луны", weaponName: "🌙 Посох луны", dmg: 50, items: [{ name: "Лунная пыль", qty: 6 }, { name: "Древний пергамент", qty: 3 }] },
+            { name: "💀 Череп некроманта", weaponName: "💀 Череп некроманта", dmg: 62, items: [{ name: "Теневые нити", qty: 7 }, { name: "Эссенция тьмы", qty: 4 }] },
+            { name: "❄️ Ледяная сфера+", weaponName: "❄️ Ледяная сфера", dmg: 30, items: [{ name: "Ледяной осколок", qty: 6 }, { name: "Древний пергамент", qty: 2 }] },
+            { name: "⚡ Грозовой жезл+", weaponName: "⚡ Грозовой жезл", dmg: 40, items: [{ name: "Рунический камень", qty: 5 }, { name: "Лунная пыль", qty: 4 }] },
+            { name: "🔥 Жезл огня+", weaponName: "🔥 Жезл огня", dmg: 20, items: [{ name: "Осколок магмы", qty: 5 }, { name: "Рунический камень", qty: 2 }] },
+            { name: "🐉 Дыхание дракона", weaponName: "🐉 Дыхание дракона", dmg: 76, items: [{ name: "Осколок магмы", qty: 8 }, { name: "Древний пергамент", qty: 4 }] },
+            { name: "🌀 Кристалл бездны", weaponName: "🌀 Кристалл бездны", dmg: 260, items: [{ name: "Эссенция тьмы", qty: 6 }, { name: "Рунический камень", qty: 6 }] },
+            { name: "🌋 Книга вулкана", weaponName: "🌋 Книга вулкана", dmg: 90, items: [{ name: "Осколок магмы", qty: 7 }, { name: "Лунная пыль", qty: 5 }] },
+            { name: "✨ Арканум времени", weaponName: "✨ Книга магии", dmg: 106, items: [{ name: "Древний пергамент", qty: 6 }, { name: "Эссенция тьмы", qty: 3 }] },
+            { name: "🌌 Космический жезл", weaponName: "🌌 Космический жезл", dmg: 144, items: [{ name: "Лунная пыль", qty: 8 }, { name: "Рунический камень", qty: 7 }] }
+        ];
+        return [
+            { name: "💀 Лук смерти", weaponName: "💀 Лук смерти", dmg: 63, items: [{ name: "Теневые нити", qty: 8 }, { name: "Эссенция тьмы", qty: 3 }] },
+            { name: "🌪️ Ветреный арбалет+", weaponName: "🌪️ Ветреный арбалет", dmg: 21, items: [{ name: "Рунический камень", qty: 4 }, { name: "Ледяной осколок", qty: 5 }] },
+            { name: "🔥 Огненный лук+", weaponName: "🔥 Огненный лук", dmg: 31, items: [{ name: "Осколок магмы", qty: 6 }, { name: "Древний пергамент", qty: 2 }] },
+            { name: "⚜️ Лук Тысячи битв", weaponName: "⚜️ Лук Тысячи битв", dmg: 126, items: [{ name: "Лунная пыль", qty: 6 }, { name: "Рунический камень", qty: 4 }] },
+            { name: "🐉 Укус виверны", weaponName: "🐉 Укус виверны", dmg: 77, items: [{ name: "Древний пергамент", qty: 5 }, { name: "Осколок магмы", qty: 7 }] },
+            { name: "🌀 Стрела хаоса", weaponName: "🌀 Стрела хаоса", dmg: 92, items: [{ name: "Эссенция тьмы", qty: 7 }, { name: "Рунический камень", qty: 6 }] },
+            { name: "🌙 Лунный арбалет", weaponName: "🌙 Лунный арбалет", dmg: 146, items: [{ name: "Лунная пыль", qty: 7 }, { name: "Древний пергамент", qty: 3 }] },
+            { name: "⚡ Громовой лук", weaponName: "⚡ Громовой лук", dmg: 268, items: [{ name: "Рунический камень", qty: 5 }, { name: "Осколок магмы", qty: 5 }] },
+            { name: "❄️ Ледяная стрела", weaponName: "❄️ Ледяная стрела", dmg: 41, items: [{ name: "Ледяной осколок", qty: 8 }, { name: "Эссенция тьмы", qty: 2 }] },
+            { name: "🔥 Пламенный лук", weaponName: "🔥 Пламенный лук", dmg: 230, items: [{ name: "Осколок магмы", qty: 8 }, { name: "Древний пергамент", qty: 3 }] }
+        ];
     }
+
+    let player = {
+        class: null, level: 1, xp: 0, gold: 800, hp: 200, maxHp: 200, mp: 50, maxMp: 50,
+        weapon: null, keys: { "Медный ключ": 0, "Серебряный ключ": 0, "Золотой ключ": 0, "Пламенный ключ": 0, "Ледяной ключ": 0, "Кровавый ключ": 0, "Магический ключ": 0, "Рунический ключ": 0, "Призрачный ключ": 0, "Драконий ключ": 0, "Адский ключ": 0, "Небесный ключ": 0 },
+        materials: { "Осколок магмы": 0, "Рунический камень": 0, "Ледяной осколок": 0, "Древний пергамент": 0, "Теневые нити": 0, "Эссенция тьмы": 0, "Лунная пыль": 0 },
+        inBattle: false, currentEnemy: null, autoAttack: false, autoHeal: false, attackInterval: null, healInterval: null
+    };
+
     function addSys(msg) { let chat = document.getElementById("chatArea"); let d = document.createElement("div"); d.className = "msg system"; d.innerHTML = msg; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; }
-    function gainXp(amt) {
-        player.xp += amt; let need = 80 + player.level * 7;
-        while (player.xp >= need && player.level < 1400) { player.xp -= need; player.level++; player.maxHp = 120 + player.level * 5; player.hp = player.maxHp; addSys(`✨ УРОВЕНЬ ${player.level}!`); need = 80 + player.level * 7; }
-        updateUI();
+    function updateUI() {
+        document.getElementById("className").innerText = player.class ? (player.class === "warrior" ? "Воин" : player.class === "mage" ? "Маг" : "Лучник") : "???";
+        document.getElementById("lvl").innerText = player.level;
+        document.getElementById("hp").innerText = Math.floor(player.hp);
+        document.getElementById("maxHp").innerText = player.maxHp;
+        document.getElementById("mp").innerText = Math.floor(player.mp);
+        document.getElementById("maxMp").innerText = player.maxMp;
+        document.getElementById("gold").innerText = Math.floor(player.gold);
+        let totalKeys = Object.values(player.keys).reduce((a,b)=>a+b,0);
+        document.getElementById("keyCount").innerText = totalKeys;
+        let dmg = player.weapon ? (player.weapon.dmg + Math.floor(player.level * 1.2)) : 10;
+        document.getElementById("dmgStat").innerText = dmg;
+        if (player.inBattle && player.currentEnemy) {
+            document.getElementById("enemyPanel").style.display = "flex";
+            document.getElementById("enemyName").innerText = player.currentEnemy.name;
+            document.getElementById("enemyHp").innerText = Math.max(0, Math.floor(player.currentEnemy.hp));
+            document.getElementById("enemyAtk").innerText = player.currentEnemy.atk;
+        } else { document.getElementById("enemyPanel").style.display = "none"; }
     }
-    function loadQuestMob() {
-        let q = QUESTS[player.questIndex % QUESTS.length];
-        let bonusHp = Math.floor(q.baseHp * (player.level / 140));
-        player.currentEnemy = { name: q.name, baseHp: q.baseHp, baseAtk: q.baseAtk, currentHp: Math.min(18000, q.baseHp + bonusHp), xpRew: q.xpRew + player.level, goldMin: q.goldMin, goldMax: q.goldMax, dropChance: q.dropChance, dropPool: q.dropPool };
-        player.enemyType = "quest";
-        addSys(`⚔️ КВЕСТ: ${player.currentEnemy.name} ❤️ ${player.currentEnemy.currentHp}`);
-    }
-    function loadBossByIdx(idx) {
-        let b = BOSS_LIST[Math.min(idx, BOSS_LIST.length-1)];
-        let bonusHp = Math.floor(b.baseHp * (player.level / 150));
-        player.currentEnemy = { name: b.name, tier: b.tier, baseHp: b.baseHp, baseAtk: b.baseAtk, currentHp: Math.min(50000, b.baseHp + bonusHp), goldMin: b.goldMin, goldMax: b.goldMax, drops: b.drops, bossId: b.id };
-        player.enemyType = "boss";
-        addSys(`👾 БОСС [${b.tier}]: ${player.currentEnemy.name} ❤️ ${player.currentEnemy.currentHp}`);
-    }
-    function attack() {
-        if (!player.currentEnemy) { addSys("Сначала выберите цель: квесты или боссы"); return; }
-        let dmg = getAttack();
-        player.currentEnemy.currentHp -= dmg;
-        addSys(`⚡ Урон ${dmg}. У противника осталось ${Math.max(0, player.currentEnemy.currentHp)} HP.`);
-        if (player.currentEnemy.currentHp <= 0) {
-            let goldGain = Math.floor(Math.random() * (player.currentEnemy.goldMax - player.currentEnemy.goldMin + 1) + player.currentEnemy.goldMin);
-            player.gold += goldGain;
-            addSys(`🏆 ПОБЕДА! +${goldGain} золота.`);
-            let xpRew = (player.enemyType === "quest") ? player.currentEnemy.xpRew : (80 + player.level * 3);
-            gainXp(xpRew);
-            if (player.enemyType === "quest") {
-                if (Math.random() < player.currentEnemy.dropChance) {
-                    let possible = POWERS.filter(p => player.currentEnemy.dropPool.includes(p.rarity) && p.source === "shop");
-                    if (possible.length) {
-                        let drop = possible[Math.floor(Math.random() * possible.length)];
-                        if (!player.inventory.includes(drop.id)) { player.inventory.push(drop.id); addSys(`📦 ДРОП: ${drop.name} добавлена!`); }
-                        else { player.gold += 70; addSys(`🔄 Дубликат → +70 золота.`); }
-                    }
+    function getDamage() { return (player.weapon ? player.weapon.dmg : 10) + Math.floor(player.level * 1.2) + Math.floor(Math.random() * 12); }
+    function attack() { if (!player.inBattle || !player.currentEnemy) { addSys("Нет боя! Возьми квест или босса."); return; }
+        let dmg = getDamage(); player.currentEnemy.hp -= dmg; addSys(`⚔️ Урон ${dmg}. У ${player.currentEnemy.name} осталось ${Math.max(0, Math.floor(player.currentEnemy.hp))} HP.`);
+        if (player.currentEnemy.hp <= 0) { defeatEnemy(); } updateUI(); saveGame(); }
+    function defeatEnemy() {
+        let goldGain = player.currentEnemy.gold + Math.floor(Math.random() * 60);
+        let xpGain = player.currentEnemy.xp + player.level * 4;
+        player.gold += goldGain; player.xp += xpGain;
+        addSys(`🏆 Победа! +${goldGain} золота, +${xpGain} опыта.`);
+        let need = 100 + player.level * 12;
+        if (player.xp >= need) { player.level++; player.xp = 0; player.maxHp += 20; player.hp = player.maxHp; addSys(`✨ УРОВЕНЬ ${player.level}!`); }
+        if (player.currentEnemy.key) { let r = Math.random(); if (r < player.currentEnemy.keyChance) { player.keys[player.currentEnemy.key]++; addSys(`🔑 Выпал ${player.currentEnemy.key}!`); } }
+        if (player.currentEnemy.drops) {
+            for (let d of player.currentEnemy.drops) {
+                if (Math.random() < d.chance) {
+                    if (d.material) { player.materials[d.material] = (player.materials[d.material] || 0) + d.qty; addSys(`📦 Материал: +${d.qty} ${d.material}`); }
+                    if (d.weapon && player.class === d.class) { let w = WEAPONS[player.class].find(w=>w.name === d.weapon); if(w && (!player.weapon || w.dmg > player.weapon.dmg)) { player.weapon = w; addSys(`⚔️ ВЫ ПОДОБРАЛИ ${w.name}!`); } }
                 }
-            } else {
-                for (let d of player.currentEnemy.drops) {
-                    if (Math.random() < d.chance) {
-                        let pwr = POWERS.find(x => x.id === d.powerId);
-                        if (pwr && !player.inventory.includes(pwr.id)) { player.inventory.push(pwr.id); addSys(`💎 ДРОП БОССА: ${pwr.name} [+${pwr.bonus}]!`); }
-                        else if (pwr) { player.gold += 120; addSys(`💰 Дубликат → +120 золота.`); }
-                    }
-                }
-                if (player.enemyType === "boss" && player.currentEnemy.bossId !== undefined && player.currentEnemy.bossId + 1 < BOSS_LIST.length) player.bossIndex = player.currentEnemy.bossId + 1;
             }
-            player.currentEnemy = null;
-            updateUI(); saveGame();
-            return;
         }
-        let enemyAtk = player.currentEnemy.baseAtk + Math.floor(player.level * 0.7);
-        let dmgToPlayer = Math.max(6, enemyAtk - Math.floor(recalcBonus() / 3));
-        player.hp -= dmgToPlayer;
-        addSys(`😖 Контратака! -${dmgToPlayer} HP (осталось ${player.hp}/${player.maxHp})`);
-        if (player.hp <= 0) { addSys(`💀 ВЫ ПОВЕРЖЕНЫ... Потеря 15% золота.`); player.gold = Math.floor(player.gold * 0.85); player.hp = player.maxHp; player.currentEnemy = null; }
+        player.inBattle = false; if (player.attackInterval) clearInterval(player.attackInterval); player.currentEnemy = null; updateUI(); saveGame();
+    }
+    function enemyAttack() { if (!player.inBattle || !player.currentEnemy) return;
+        let dmg = Math.max(6, player.currentEnemy.atk + Math.floor(Math.random() * 14) - Math.floor(player.level * 0.3));
+        player.hp -= dmg; addSys(`😖 ${player.currentEnemy.name} атакует! -${dmg} HP. Осталось ${Math.floor(player.hp)}/${player.maxHp}`);
+        if (player.hp <= 0) { addSys(`💀 Вы пали... Потеря 20% золота.`); player.gold = Math.floor(player.gold * 0.8); player.hp = player.maxHp; player.inBattle = false; if(player.attackInterval) clearInterval(player.attackInterval); player.currentEnemy = null; }
         updateUI(); saveGame();
     }
-    function heal() { let cost = 45; if (player.gold >= cost && player.hp < player.maxHp) { player.gold -= cost; player.hp = Math.min(player.maxHp, player.hp + 35 + Math.floor(player.level*0.9)); addSys(`💚 Лечение. -${cost} золота.`); } else addSys(`❌ Не хватает или HP полное.`); updateUI(); saveGame(); }
-    function caseOpen() { if (player.gold < 200) { addSys(`💰 Нужно 200 золота.`); return; } player.gold -= 200; let r = Math.random(); let tier = "common"; if (r > 0.75) tier = "epic"; else if (r > 0.4) tier = "rare"; let possible = POWERS.filter(p => p.rarity === tier && p.source === "shop"); if (!possible.length) possible = POWERS.filter(p => p.source === "shop"); let got = possible[Math.floor(Math.random() * possible.length)]; if (!player.inventory.includes(got.id)) { player.inventory.push(got.id); addSys(`🎁 КЕЙС: ${got.name} (${got.rarity}) +${got.bonus}!`); } else { player.gold += 80; addSys(`🎁 КЕЙС: дубликат → +80 золота.`); } updateUI(); saveGame(); }
-    function shop() { let list = POWERS.filter(p => p.source === "shop").map(p => `${p.id} → ${p.name} (+${p.bonus}) [${p.rarity}] ${player.inventory.includes(p.id) ? "✅" : p.cost+"💰"}`).join("\n"); addSys(`🏪 МАГАЗИН:\n${list}\nкупить pX`); }
-    function buy(pId) { let power = POWERS.find(p => p.id === pId && p.source === "shop"); if (!power) { addSys(`Нет такой.`); return; } if (player.inventory.includes(power.id)) { addSys(`Уже есть.`); return; } if (player.gold >= power.cost) { player.gold -= power.cost; player.inventory.push(power.id); addSys(`✅ Куплено: ${power.name}!`); updateUI(); saveGame(); } else addSys(`Не хватает.`); }
-    function inv() { if (player.inventory.length === 0) addSys(`📭 Пусто.`); else { let list = player.inventory.map(pid => { let p = POWERS.find(pw => pw.id === pid); return `${p.name} [+${p.bonus}] ${p.rarity}`; }).join(", "); addSys(`📦 ИНВЕНТАРЬ: ${list}`); } }
-    function showQuests() { let str = QUESTS.map((q, i) => `${i+1}. ${q.name}`).join("\n"); addSys(`📜 КВЕСТЫ:\n${str}\nквест N`); }
-    function startQuest(num) { if (num>=1 && num<=QUESTS.length) { player.questIndex = num-1; loadQuestMob(); } else addSys(`Неверный номер.`); }
-    function showBosses() { let str = BOSS_LIST.map((b, i) => `${i}. ${b.name} [${b.tier}]`).join("\n"); addSys(`👑 БОССЫ:\n${str}\nбосс N`); }
-    function startBoss(num) { if (num>=0 && num<BOSS_LIST.length) { player.bossIndex = num; loadBossByIdx(num); } else addSys(`Неверный номер.`); }
-    function help() { addSys(`🔰 КОМАНДЫ:\nквесты, квест N, боссы, босс N, атака, лечить, кейс, магазин, купить pX, инвентарь, статы, помощь`); }
-    function statsCmd() { addSys(`⚡ Уровень ${player.level}, опыт ${player.xp}, золото ${Math.floor(player.gold)}, сил: ${player.inventory.length}, атака: ${getAttack()}, HP: ${player.hp}/${player.maxHp}`); }
-
-    // ===================== СЕКРЕТНЫЕ КОМАНДЫ (работают через чат) =====================
-    function checkSecrets(word) {
-        let w = word.toLowerCase().trim();
-        if (w === "темнее") { player.gold += 500; addSys("🌑 Тьма шепчет... +500 золота."); saveGame(); updateUI(); return true; }
-        if (w === "основа") { if (!player.inventory.includes("p14")) { player.inventory.push("p14"); addSys("🔥 Ты нашёл Крылья Феникса! Сила добавлена."); recalcBonus(); saveGame(); updateUI(); } else addSys("Основа уже была."); return true; }
-        if (w === "никогда") { player.hp = player.maxHp; addSys("🌟 Таинственное слово исцелило тебя полностью!"); updateUI(); saveGame(); return true; }
-        if (w === "забвение") { let exp = 250 + player.level * 5; gainXp(exp); addSys(`📜 Забвение дало ${exp} опыта.`); saveGame(); return true; }
-        if (w === "шепот") { player.gold += 1000; addSys("👂 Шёпот из стены... +1000 золота"); updateUI(); saveGame(); return true; }
-        if (w === "карта") { if (player.bossIndex >= 4 && !player.secretFlags.mapUsed) { player.secretFlags.mapUsed = true; if (!player.inventory.includes("p10")) { player.inventory.push("p10"); addSys("🗺️ Тайная карта! Вы получили Корону теней."); recalcBonus(); } else player.gold += 300; saveGame(); updateUI(); } else addSys("Карта молчит... (нужно победить 5+ боссов)"); return true; }
-        if (w === "рассвет") { if (player.level >= 20 && !player.secretFlags.dawnUsed) { player.secretFlags.dawnUsed = true; if (!player.inventory.includes("p11")) { player.inventory.push("p11"); addSys("🌅 Рассвет озарил тебя! + Световой меч порядка."); recalcBonus(); } else player.gold += 500; saveGame(); updateUI(); } else addSys("Рассвет не пришёл (нужен уровень 20+)"); return true; }
-        if (w === "бездна") { if (player.bossIndex >= 9 && !player.secretFlags.abyssUsed) { player.secretFlags.abyssUsed = true; if (!player.inventory.includes("p20")) { player.inventory.push("p20"); addSys("🌀 Бездна ответила! + Клинок бездны (легендарный)"); recalcBonus(); } else player.gold += 1000; saveGame(); updateUI(); } else addSys("Бездна безмолвна (победи Повелителя бездны)"); return true; }
-        if (w === "феникс") { if (!player.secretFlags.phoenixUsed && player.hp <= 0) { player.secretFlags.phoenixUsed = true; player.hp = Math.floor(player.maxHp * 0.5); addSys("🔥 Феникс возродил тебя! +50% HP"); updateUI(); saveGame(); } else if (player.hp > 0) addSys("Феникс ждёт твоей гибели..."); return true; }
-        if (w === "тишина") { player.gold += 140; addSys("🤫 Тишина... +140 золота"); updateUI(); saveGame(); return true; }
-        if (w === "секреты") { let found = (player.secretFlags.mapUsed?1:0)+(player.secretFlags.dawnUsed?1:0)+(player.secretFlags.abyssUsed?1:0)+(player.secretFlags.phoenixUsed?1:0); addSys(`🔎 Ты нашёл ${found} секретов из многих. Продолжай искать...`); return true; }
-        return false;
-    }
-
-    function saveGame() { localStorage.setItem("RPG_SAVE", JSON.stringify({ level: player.level, xp: player.xp, gold: player.gold, hp: player.hp, maxHp: player.maxHp, inventory: player.inventory, bossIndex: player.bossIndex, questIndex: player.questIndex, secretFlags: player.secretFlags })); }
+    function startBattle(enemy) { if (player.inBattle) { addSys("Вы уже в бою!"); return; } player.currentEnemy = JSON.parse(JSON.stringify(enemy)); player.inBattle = true; addSys(`⚔️ Бой с ${enemy.name} (❤️ ${enemy.hp} | ⚔️ ${enemy.atk})`); updateUI(); }
+    function heal() { let cost = 45; if (player.gold >= cost && player.hp < player.maxHp) { player.gold -= cost; player.hp = Math.min(player.maxHp, player.hp + 40 + player.level); addSys(`💚 Лечение +${40+player.level} HP. -${cost} золота.`); } else addSys(`❌ Не хватает.`); updateUI(); saveGame(); }
+    function toggleAutoAttack() { player.autoAttack = !player.autoAttack; if(player.autoAttack){ addSys(`🔄 Авто-атака ВКЛ`); if(player.attackInterval) clearInterval(player.attackInterval); player.attackInterval = setInterval(()=>{ if(player.inBattle && player.currentEnemy?.hp>0 && player.hp>0) attack(); }, 3500); document.getElementById("autoAttackBtn").classList.add("active-mode"); } else { addSys(`🔴 Авто-атака ВЫКЛ`); if(player.attackInterval) clearInterval(player.attackInterval); document.getElementById("autoAttackBtn").classList.remove("active-mode"); } }
+    function toggleAutoHeal() { player.autoHeal = !player.autoHeal; if(player.autoHeal){ addSys(`💊 Авто-лечение ВКЛ`); if(player.healInterval) clearInterval(player.healInterval); player.healInterval = setInterval(()=>{ if(player.autoHeal && player.hp/player.maxHp<0.7 && player.gold>=45) heal(); }, 5500); document.getElementById("autoHealBtn").classList.add("active-mode"); } else { addSys(`💊 Авто-лечение ВЫКЛ`); if(player.healInterval) clearInterval(player.healInterval); document.getElementById("autoHealBtn").classList.remove("active-mode"); } }
+    function showQuests() { let panel = document.getElementById("dynamicPanel"); panel.innerHTML = `<strong>📜 КВЕСТЫ</strong><div class="select-list">`+QUESTS.map((q,i)=>`<div class="select-item" data-idx="${i}">${q.name} (❤️${q.hp} ⚔️${q.atk}) ➜ ${q.key}</div>`).join('')+`</div><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden"); document.querySelectorAll(".select-item").forEach(el=>el.onclick=()=>{ let idx=parseInt(el.dataset.idx); startBattle({ ...QUESTS[idx] }); panel.classList.add("hidden"); }); document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
+    function showBosses() { let panel = document.getElementById("dynamicPanel"); panel.innerHTML = `<strong>👑 ОБЫЧНЫЕ БОССЫ</strong><div class="select-list">`+NORMAL_BOSSES.map((b,i)=>`<div class="select-item" data-normal="${i}">${b.name} (❤️${b.hp} ⚔️${b.atk})</div>`).join('')+`</div><hr><strong>⭐ ЭЛИТНЫЕ (нужен ключ)</strong><div class="select-list">`+ELITE_BOSSES.map((b,i)=>`<div class="select-item" data-elite="${i}">${b.name} (${b.needKey})</div>`).join('')+`</div><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden"); 
+        document.querySelectorAll("[data-normal]").forEach(el=>el.onclick=()=>{ let idx=parseInt(el.dataset.normal); startBattle({ ...NORMAL_BOSSES[idx] }); panel.classList.add("hidden"); });
+        document.querySelectorAll("[data-elite]").forEach(el=>el.onclick=()=>{ let idx=parseInt(el.dataset.elite); let b=ELITE_BOSSES[idx]; if(player.keys[b.needKey]>0){ player.keys[b.needKey]--; startBattle({ ...b }); addSys(`🔓 Использован ${b.needKey}.`); panel.classList.add("hidden"); } else addSys(`❌ Нужен ${b.needKey}!`); });
+        document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
+    function shop() { if(!player.class) return; let items = WEAPONS[player.class]; let panel=document.getElementById("dynamicPanel"); panel.innerHTML=`<strong>🏪 МАГАЗИН (${player.class==="warrior"?"Воин":player.class==="mage"?"Маг":"Лучник"})</strong><div class="select-list">`+items.map((w,i)=>`<div class="shop-item" data-idx="${i}">${w.name} +${w.dmg} ур. - ${w.cost}💰</div>`).join('')+`</div><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden");
+        document.querySelectorAll(".shop-item").forEach(el=>el.onclick=()=>{ let idx=parseInt(el.dataset.idx); let w=WEAPONS[player.class][idx]; if(w.cost===0) { addSys(`Стартовое оружие`); return; } if(player.gold>=w.cost){ player.gold-=w.cost; player.weapon={name:w.name,dmg:w.dmg}; addSys(`✅ Куплено: ${w.name}!`); updateUI(); saveGame(); panel.classList.add("hidden");} else addSys(`Не хватает`); });
+        document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
+    function showInventory() { let panel=document.getElementById("dynamicPanel"); panel.innerHTML=`<strong>📦 ИНВЕНТАРЬ</strong><br>Оружие: ${player.weapon?.name||"нет"} (урон +${player.weapon?.dmg||0})<br>🔑 Ключи: ${Object.entries(player.keys).filter(k=>k[1]>0).map(k=>`${k[0]}:${k[1]}`).join(", ")||"нет"}<br>📦 Материалы: ${Object.entries(player.materials).filter(m=>m[1]>0).map(m=>`${m[0]}:${m[1]}`).join(", ")||"пусто"}<br><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden"); document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
+    function showCraft() { if(!player.class) return; let crafts=getCraftsByClass(player.class); let panel=document.getElementById("dynamicPanel"); panel.innerHTML=`<strong>⚙️ КРАФТ</strong><div class="select-list">`+crafts.map((c,i)=>`<div class="craft-item" data-idx="${i}" data-name="${c.name}" data-weapon="${c.weaponName}" data-dmg="${c.dmg}" data-req='${JSON.stringify(c.items)}'><b>${c.name}</b> <span class="craft-damage">⚔️ +${c.dmg} урона</span><br><span class="craft-recipe">📦 Требуется: ${c.items.map(it=>`${it.name} x${it.qty}`).join(', ')}</span></div>`).join('')+`</div><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden");
+        document.querySelectorAll(".craft-item").forEach(el=>el.onclick=()=>{ let reqs=JSON.parse(el.dataset.req); let ok=true; for(let r of reqs) if((player.materials[r.name]||0)<r.qty) ok=false; if(!ok){addSys("❌ Не хватает материалов"); return;} for(let r of reqs) player.materials[r.name]-=r.qty; let newDmg=parseInt(el.dataset.dmg); let newName=el.dataset.weapon; player.weapon={name:newName,dmg:newDmg}; addSys(`✨ Вы скрафтили ${newName} (+${newDmg} урона)!`); updateUI(); saveGame(); panel.classList.add("hidden"); });
+        document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
+    function setClass(cn) { if(player.class) return; player.class=cn; player.weapon=WEAPONS[player.class][0]; if(cn==="warrior"){player.maxHp=260;player.hp=260;player.maxMp=40;player.mp=40;} else if(cn==="mage"){player.maxHp=180;player.hp=180;player.maxMp=110;player.mp=110;} else{player.maxHp=210;player.hp=210;player.maxMp=60;player.mp=60;} addSys(`🎭 Класс: ${cn.toUpperCase()}. Оружие: ${player.weapon.name} (+${player.weapon.dmg} урона)`); updateUI(); saveGame(); }
+    function statsCmd(){ addSys(`Ур.${player.level} ❤️${Math.floor(player.hp)}/${player.maxHp} 💙${Math.floor(player.mp)}/${player.maxMp} ⚔️Урон ${player.weapon?player.weapon.dmg+Math.floor(player.level*1.2):10} 🪙${Math.floor(player.gold)}`); }
+    function secretBoss() { addSys(`🌌 Ты прошептал древнее заклинание...`); startBattle({ name: "🌀 Хранитель Бездны", hp: 40000+player.level*150, atk: 2000+player.level*8, gold: 80000, xp: 40000, drops: [{ weapon: "🌀 Клинок Хаоса", class: "warrior", chance: 0.4 },{ weapon: "🌀 Кристалл бездны", class: "mage", chance: 0.4 },{ weapon: "🌀 Стрела хаоса", class: "archer", chance: 0.4 }] }); }
+    function processCmd(cmd) { let c = cmd.toLowerCase().trim(); if(c === "статы") statsCmd(); else if(c === "помощь") addSys(`статы, помощь`); else if(c === SECRET_BOSS_COMMAND) secretBoss(); else addSys(`❓ Неизвестно.`); }
+    function saveGame() { localStorage.setItem("TV_SAVE_FULL", JSON.stringify({ class:player.class, level:player.level, xp:player.xp, gold:player.gold, hp:player.hp, maxHp:player.maxHp, mp:player.mp, maxMp:player.maxMp, weapon:player.weapon, keys:player.keys, materials:player.materials })); }
     function loadGame() {
-        let raw = localStorage.getItem("RPG_SAVE");
-        if (raw) { let d = JSON.parse(raw); player.level = d.level; player.xp = d.xp; player.gold = d.gold; player.hp = d.hp; player.maxHp = d.maxHp; player.inventory = d.inventory; player.bossIndex = d.bossIndex; player.questIndex = d.questIndex; player.secretFlags = d.secretFlags || {}; addSys(`📀 Загружено.`); }
-        else { player.inventory = ["p1"]; addSys(`🎁 Стартовый кинжал.`); }
+        let raw = localStorage.getItem("TV_SAVE_FULL");
+        if(raw){ let d=JSON.parse(raw); player.class=d.class; player.level=d.level; player.xp=d.xp; player.gold=d.gold; player.hp=d.hp; player.maxHp=d.maxHp; player.mp=d.mp; player.maxMp=d.maxMp; player.weapon=d.weapon; player.keys=d.keys||player.keys; player.materials=d.materials||player.materials; addSys("📀 Загружено."); updateUI(); } 
+        else { document.getElementById("dynamicPanel").innerHTML=`<div class="class-selector"><div class="class-btn" id="classWar">⚔️ ВОИН</div><div class="class-btn" id="classMage">🔮 МАГ</div><div class="class-btn" id="classArch">🏹 ЛУЧНИК</div></div>`; document.getElementById("dynamicPanel").classList.remove("hidden"); document.getElementById("classWar").onclick=()=>{setClass("warrior"); document.getElementById("dynamicPanel").classList.add("hidden");}; document.getElementById("classMage").onclick=()=>{setClass("mage"); document.getElementById("dynamicPanel").classList.add("hidden");}; document.getElementById("classArch").onclick=()=>{setClass("archer"); document.getElementById("dynamicPanel").classList.add("hidden");}; }
         updateUI();
     }
-
-    function process(cmd) {
-        let parts = cmd.trim().split(" ");
-        let main = parts[0].toLowerCase();
-        if (main === "атака") attack();
-        else if (main === "лечить") heal();
-        else if (main === "кейс") caseOpen();
-        else if (main === "магазин") shop();
-        else if (main === "инвентарь") inv();
-        else if (main === "статы") statsCmd();
-        else if (main === "помощь") help();
-        else if (main === "квесты") showQuests();
-        else if (main === "квест" && parts[1]) startQuest(parseInt(parts[1]));
-        else if (main === "боссы") showBosses();
-        else if (main === "босс" && parts[1]) startBoss(parseInt(parts[1]));
-        else if (main === "купить" && parts[1]) buy(parts[1]);
-        else { if (!checkSecrets(cmd)) addSys(`❓ Неизвестно. помощь`); }
-    }
-
-    document.getElementById("sendBtn").onclick = () => { let inp = document.getElementById("cmdInput"); let val = inp.value.trim(); if (val) process(val); inp.value = ""; };
-    document.getElementById("cmdInput").addEventListener("keypress", (e) => { if (e.key === "Enter") document.getElementById("sendBtn").click(); });
+    document.getElementById("questBtn").onclick=()=>{if(player.class) showQuests(); else addSys("Выберите класс!");};
+    document.getElementById("bossListBtn").onclick=()=>{if(player.class) showBosses(); else addSys("Выберите класс!");};
+    document.getElementById("attackBtn").onclick=attack;
+    document.getElementById("autoAttackBtn").onclick=toggleAutoAttack;
+    document.getElementById("healBtn").onclick=heal;
+    document.getElementById("autoHealBtn").onclick=toggleAutoHeal;
+    document.getElementById("shopBtn").onclick=shop;
+    document.getElementById("inventoryBtn").onclick=showInventory;
+    document.getElementById("craftBtn").onclick=showCraft;
+    document.getElementById("sendBtn").onclick=()=>{ let inp=document.getElementById("cmdInput"); processCmd(inp.value); inp.value=""; };
     loadGame();
+    setInterval(()=>{ if(player.inBattle && player.currentEnemy && player.currentEnemy.hp>0 && player.hp>0) enemyAttack(); }, 4000);
 </script>
 </body>
 </html>
