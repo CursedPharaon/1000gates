@@ -2,13 +2,17 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
     <title>Тысячи врат: Текстовая RPG</title>
     <style>
         * {
             box-sizing: border-box;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        html, body {
+            touch-action: manipulation;
         }
         body {
             background: #0a0c16;
@@ -19,6 +23,10 @@
             display: flex;
             flex-direction: column;
             color: #eef4ff;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            touch-action: pan-y pinch-zoom;
         }
         .game-container {
             max-width: 700px;
@@ -29,10 +37,9 @@
             flex-direction: column;
             height: 100%;
             width: 100%;
-            overflow: hidden;
             box-shadow: 0 0 0 1px #2a3f55;
+            overflow: hidden;
         }
-        /* Верхняя панель статистики */
         .stats-panel {
             background: #010a17;
             padding: 8px 10px;
@@ -46,7 +53,6 @@
             flex-shrink: 0;
         }
         .stats-panel span { color: #f5bc70; }
-        /* Панель врага */
         .enemy-panel {
             background: #0d1a2a;
             padding: 8px;
@@ -58,7 +64,6 @@
             font-size: 0.8rem;
             flex-shrink: 0;
         }
-        /* Чат (скроллится) */
         .chat {
             flex: 1;
             overflow-y: auto;
@@ -68,6 +73,7 @@
             gap: 6px;
             background: #051020;
             font-size: 0.8rem;
+            -webkit-overflow-scrolling: touch;
         }
         .msg {
             background: #0f1a2c;
@@ -82,7 +88,7 @@
             background: #121e2e;
             border-left-color: #d6b356;
         }
-        /* Панель с кнопками - ДВЕ КОЛОНКИ, СКРОЛЛЯТСЯ ВМЕСТЕ С ЧАТОМ */
+        /* ДВЕ КОЛОНКИ КНОПОК - БЕЗ ЗУМА ПРИ КЛИКЕ */
         .buttons-panel {
             background: #030c17;
             padding: 10px;
@@ -92,6 +98,7 @@
             border-top: 1px solid #1a3045;
             border-bottom: 1px solid #1a3045;
             flex-shrink: 0;
+            touch-action: manipulation;
         }
         .buttons-panel button {
             background: #1f3a52;
@@ -104,10 +111,12 @@
             cursor: pointer;
             transition: 0.05s linear;
             text-align: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
-        .buttons-panel button:active { transform: scale(0.97); background: #2c5a7a; }
+        .buttons-panel button:active { transform: scale(0.96); background: #2c5a7a; }
         .active-mode { background: #4c7a9a !important; box-shadow: 0 0 6px #7ab3c8; }
-        /* Поле ввода ВСЕГДА ВНИЗУ */
+        /* ПОЛЕ ВВОДА */
         .input-area {
             display: flex;
             gap: 8px;
@@ -125,8 +134,9 @@
             color: white;
             font-size: 0.9rem;
             outline: none;
+            touch-action: manipulation;
         }
-        button { background: #2c4f6e; border: none; color: white; padding: 8px 16px; border-radius: 40px; cursor: pointer; }
+        button { background: #2c4f6e; border: none; color: white; padding: 8px 16px; border-radius: 40px; cursor: pointer; touch-action: manipulation; }
         .hidden { display: none; }
         .sub-panel {
             background: #0a1424;
@@ -138,19 +148,18 @@
             flex-shrink: 0;
         }
         .class-selector { display: flex; gap: 12px; justify-content: center; margin: 10px; }
-        .class-btn { background: #2a3f55; padding: 12px; flex: 1; text-align: center; border-radius: 60px; font-weight: bold; cursor: pointer; }
+        .class-btn { background: #2a3f55; padding: 12px; flex: 1; text-align: center; border-radius: 60px; font-weight: bold; cursor: pointer; touch-action: manipulation; }
         .select-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; max-height: 150px; overflow-y: auto; }
-        .select-item { background: #162336; padding: 6px 10px; border-radius: 40px; cursor: pointer; margin: 2px; font-size: 0.7rem; }
-        .craft-item { background: #162336; padding: 6px; border-radius: 16px; margin: 4px; cursor: pointer; }
+        .select-item { background: #162336; padding: 6px 10px; border-radius: 40px; cursor: pointer; margin: 2px; font-size: 0.7rem; touch-action: manipulation; }
+        .craft-item { background: #162336; padding: 6px; border-radius: 16px; margin: 4px; cursor: pointer; touch-action: manipulation; }
         .craft-recipe { font-size: 0.6rem; color: #aac8ff; }
         .craft-damage { font-size: 0.65rem; color: #ffaa66; font-weight: bold; margin-left: 6px; }
-        .shop-item { background: #162336; padding: 6px 10px; border-radius: 40px; margin: 3px; cursor: pointer; font-size: 0.7rem; display: flex; justify-content: space-between; }
+        .shop-item { background: #162336; padding: 6px 10px; border-radius: 40px; margin: 3px; cursor: pointer; font-size: 0.7rem; display: flex; justify-content: space-between; touch-action: manipulation; }
         hr { border-color: #2e4b6e; margin: 5px; }
     </style>
 </head>
 <body>
 <div class="game-container">
-    <!-- Статистика -->
     <div class="stats-panel">
         <div>⚔️ <span id="className">???</span> | Ур.<span id="lvl">1</span></div>
         <div>❤️ <span id="hp">200</span>/<span id="maxHp">200</span></div>
@@ -159,19 +168,18 @@
         <div>⚡ УРН <span id="dmgStat">20</span></div>
         <div>🔑 <span id="keyCount">0</span></div>
     </div>
-    <!-- Враг -->
     <div class="enemy-panel" id="enemyPanel" style="display: none;">
         <span>👾 <span id="enemyName">Гоблин</span></span>
         <span>❤️ <span id="enemyHp">120</span></span>
         <span>⚔️ <span id="enemyAtk">28</span></span>
     </div>
-    <!-- Чат -->
+
     <div class="chat" id="chatArea">
         <div class="msg system">🌀 Тысячи врат. Выбери класс.</div>
     </div>
-    <!-- Динамическая панель (меню) -->
+
     <div id="dynamicPanel" class="sub-panel hidden"></div>
-    <!-- КНОПКИ - ДВЕ КОЛОНКИ, ВСЕ ВИДНЫ -->
+
     <div class="buttons-panel">
         <button id="questBtn">📜 КВЕСТЫ</button>
         <button id="bossListBtn">👑 БОССЫ</button>
@@ -183,7 +191,7 @@
         <button id="inventoryBtn">📦 ИНВЕНТАРЬ</button>
         <button id="craftBtn">⚙️ КРАФТ</button>
     </div>
-    <!-- Поле ввода -->
+
     <div class="input-area">
         <input type="text" id="cmdInput" placeholder="статы, помощь..." autocomplete="off">
         <button id="sendBtn">➤</button>
@@ -334,108 +342,4 @@
             { name: "🔥 Огненный лук+", weaponName: "🔥 Огненный лук", dmg: 31, items: [{ name: "Осколок магмы", qty: 6 }, { name: "Древний пергамент", qty: 2 }] },
             { name: "⚜️ Лук Тысячи битв", weaponName: "⚜️ Лук Тысячи битв", dmg: 126, items: [{ name: "Лунная пыль", qty: 6 }, { name: "Рунический камень", qty: 4 }] },
             { name: "🐉 Укус виверны", weaponName: "🐉 Укус виверны", dmg: 77, items: [{ name: "Древний пергамент", qty: 5 }, { name: "Осколок магмы", qty: 7 }] },
-            { name: "🌀 Стрела хаоса", weaponName: "🌀 Стрела хаоса", dmg: 92, items: [{ name: "Эссенция тьмы", qty: 7 }, { name: "Рунический камень", qty: 6 }] },
-            { name: "🌙 Лунный арбалет", weaponName: "🌙 Лунный арбалет", dmg: 146, items: [{ name: "Лунная пыль", qty: 7 }, { name: "Древний пергамент", qty: 3 }] },
-            { name: "⚡ Громовой лук", weaponName: "⚡ Громовой лук", dmg: 268, items: [{ name: "Рунический камень", qty: 5 }, { name: "Осколок магмы", qty: 5 }] },
-            { name: "❄️ Ледяная стрела", weaponName: "❄️ Ледяная стрела", dmg: 41, items: [{ name: "Ледяной осколок", qty: 8 }, { name: "Эссенция тьмы", qty: 2 }] },
-            { name: "🔥 Пламенный лук", weaponName: "🔥 Пламенный лук", dmg: 230, items: [{ name: "Осколок магмы", qty: 8 }, { name: "Древний пергамент", qty: 3 }] }
-        ];
-    }
-
-    let player = {
-        class: null, level: 1, xp: 0, gold: 800, hp: 200, maxHp: 200, mp: 50, maxMp: 50,
-        weapon: null, keys: { "Медный ключ": 0, "Серебряный ключ": 0, "Золотой ключ": 0, "Пламенный ключ": 0, "Ледяной ключ": 0, "Кровавый ключ": 0, "Магический ключ": 0, "Рунический ключ": 0, "Призрачный ключ": 0, "Драконий ключ": 0, "Адский ключ": 0, "Небесный ключ": 0 },
-        materials: { "Осколок магмы": 0, "Рунический камень": 0, "Ледяной осколок": 0, "Древний пергамент": 0, "Теневые нити": 0, "Эссенция тьмы": 0, "Лунная пыль": 0 },
-        inBattle: false, currentEnemy: null, autoAttack: false, autoHeal: false, attackInterval: null, healInterval: null
-    };
-
-    function addSys(msg) { let chat = document.getElementById("chatArea"); let d = document.createElement("div"); d.className = "msg system"; d.innerHTML = msg; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; }
-    function updateUI() {
-        document.getElementById("className").innerText = player.class ? (player.class === "warrior" ? "Воин" : player.class === "mage" ? "Маг" : "Лучник") : "???";
-        document.getElementById("lvl").innerText = player.level;
-        document.getElementById("hp").innerText = Math.floor(player.hp);
-        document.getElementById("maxHp").innerText = player.maxHp;
-        document.getElementById("mp").innerText = Math.floor(player.mp);
-        document.getElementById("maxMp").innerText = player.maxMp;
-        document.getElementById("gold").innerText = Math.floor(player.gold);
-        let totalKeys = Object.values(player.keys).reduce((a,b)=>a+b,0);
-        document.getElementById("keyCount").innerText = totalKeys;
-        let dmg = player.weapon ? (player.weapon.dmg + Math.floor(player.level * 1.2)) : 10;
-        document.getElementById("dmgStat").innerText = dmg;
-        if (player.inBattle && player.currentEnemy) {
-            document.getElementById("enemyPanel").style.display = "flex";
-            document.getElementById("enemyName").innerText = player.currentEnemy.name;
-            document.getElementById("enemyHp").innerText = Math.max(0, Math.floor(player.currentEnemy.hp));
-            document.getElementById("enemyAtk").innerText = player.currentEnemy.atk;
-        } else { document.getElementById("enemyPanel").style.display = "none"; }
-    }
-    function getDamage() { return (player.weapon ? player.weapon.dmg : 10) + Math.floor(player.level * 1.2) + Math.floor(Math.random() * 12); }
-    function attack() { if (!player.inBattle || !player.currentEnemy) { addSys("Нет боя! Возьми квест или босса."); return; }
-        let dmg = getDamage(); player.currentEnemy.hp -= dmg; addSys(`⚔️ Урон ${dmg}. У ${player.currentEnemy.name} осталось ${Math.max(0, Math.floor(player.currentEnemy.hp))} HP.`);
-        if (player.currentEnemy.hp <= 0) { defeatEnemy(); } updateUI(); saveGame(); }
-    function defeatEnemy() {
-        let goldGain = player.currentEnemy.gold + Math.floor(Math.random() * 60);
-        let xpGain = player.currentEnemy.xp + player.level * 4;
-        player.gold += goldGain; player.xp += xpGain;
-        addSys(`🏆 Победа! +${goldGain} золота, +${xpGain} опыта.`);
-        let need = 100 + player.level * 12;
-        if (player.xp >= need) { player.level++; player.xp = 0; player.maxHp += 20; player.hp = player.maxHp; addSys(`✨ УРОВЕНЬ ${player.level}!`); }
-        if (player.currentEnemy.key) { let r = Math.random(); if (r < player.currentEnemy.keyChance) { player.keys[player.currentEnemy.key]++; addSys(`🔑 Выпал ${player.currentEnemy.key}!`); } }
-        if (player.currentEnemy.drops) {
-            for (let d of player.currentEnemy.drops) {
-                if (Math.random() < d.chance) {
-                    if (d.material) { player.materials[d.material] = (player.materials[d.material] || 0) + d.qty; addSys(`📦 Материал: +${d.qty} ${d.material}`); }
-                    if (d.weapon && player.class === d.class) { let w = WEAPONS[player.class].find(w=>w.name === d.weapon); if(w && (!player.weapon || w.dmg > player.weapon.dmg)) { player.weapon = w; addSys(`⚔️ ВЫ ПОДОБРАЛИ ${w.name}!`); } }
-                }
-            }
-        }
-        player.inBattle = false; if (player.attackInterval) clearInterval(player.attackInterval); player.currentEnemy = null; updateUI(); saveGame();
-    }
-    function enemyAttack() { if (!player.inBattle || !player.currentEnemy) return;
-        let dmg = Math.max(6, player.currentEnemy.atk + Math.floor(Math.random() * 14) - Math.floor(player.level * 0.3));
-        player.hp -= dmg; addSys(`😖 ${player.currentEnemy.name} атакует! -${dmg} HP. Осталось ${Math.floor(player.hp)}/${player.maxHp}`);
-        if (player.hp <= 0) { addSys(`💀 Вы пали... Потеря 20% золота.`); player.gold = Math.floor(player.gold * 0.8); player.hp = player.maxHp; player.inBattle = false; if(player.attackInterval) clearInterval(player.attackInterval); player.currentEnemy = null; }
-        updateUI(); saveGame();
-    }
-    function startBattle(enemy) { if (player.inBattle) { addSys("Вы уже в бою!"); return; } player.currentEnemy = JSON.parse(JSON.stringify(enemy)); player.inBattle = true; addSys(`⚔️ Бой с ${enemy.name} (❤️ ${enemy.hp} | ⚔️ ${enemy.atk})`); updateUI(); }
-    function heal() { let cost = 45; if (player.gold >= cost && player.hp < player.maxHp) { player.gold -= cost; player.hp = Math.min(player.maxHp, player.hp + 40 + player.level); addSys(`💚 Лечение +${40+player.level} HP. -${cost} золота.`); } else addSys(`❌ Не хватает.`); updateUI(); saveGame(); }
-    function toggleAutoAttack() { player.autoAttack = !player.autoAttack; if(player.autoAttack){ addSys(`🔄 Авто-атака ВКЛ`); if(player.attackInterval) clearInterval(player.attackInterval); player.attackInterval = setInterval(()=>{ if(player.inBattle && player.currentEnemy?.hp>0 && player.hp>0) attack(); }, 3500); document.getElementById("autoAttackBtn").classList.add("active-mode"); } else { addSys(`🔴 Авто-атака ВЫКЛ`); if(player.attackInterval) clearInterval(player.attackInterval); document.getElementById("autoAttackBtn").classList.remove("active-mode"); } }
-    function toggleAutoHeal() { player.autoHeal = !player.autoHeal; if(player.autoHeal){ addSys(`💊 Авто-лечение ВКЛ`); if(player.healInterval) clearInterval(player.healInterval); player.healInterval = setInterval(()=>{ if(player.autoHeal && player.hp/player.maxHp<0.7 && player.gold>=45) heal(); }, 5500); document.getElementById("autoHealBtn").classList.add("active-mode"); } else { addSys(`💊 Авто-лечение ВЫКЛ`); if(player.healInterval) clearInterval(player.healInterval); document.getElementById("autoHealBtn").classList.remove("active-mode"); } }
-    function showQuests() { let panel = document.getElementById("dynamicPanel"); panel.innerHTML = `<strong>📜 КВЕСТЫ</strong><div class="select-list">`+QUESTS.map((q,i)=>`<div class="select-item" data-idx="${i}">${q.name} (❤️${q.hp} ⚔️${q.atk}) ➜ ${q.key}</div>`).join('')+`</div><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden"); document.querySelectorAll(".select-item").forEach(el=>el.onclick=()=>{ let idx=parseInt(el.dataset.idx); startBattle({ ...QUESTS[idx] }); panel.classList.add("hidden"); }); document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
-    function showBosses() { let panel = document.getElementById("dynamicPanel"); panel.innerHTML = `<strong>👑 ОБЫЧНЫЕ БОССЫ</strong><div class="select-list">`+NORMAL_BOSSES.map((b,i)=>`<div class="select-item" data-normal="${i}">${b.name} (❤️${b.hp} ⚔️${b.atk})</div>`).join('')+`</div><hr><strong>⭐ ЭЛИТНЫЕ (нужен ключ)</strong><div class="select-list">`+ELITE_BOSSES.map((b,i)=>`<div class="select-item" data-elite="${i}">${b.name} (${b.needKey})</div>`).join('')+`</div><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden"); 
-        document.querySelectorAll("[data-normal]").forEach(el=>el.onclick=()=>{ let idx=parseInt(el.dataset.normal); startBattle({ ...NORMAL_BOSSES[idx] }); panel.classList.add("hidden"); });
-        document.querySelectorAll("[data-elite]").forEach(el=>el.onclick=()=>{ let idx=parseInt(el.dataset.elite); let b=ELITE_BOSSES[idx]; if(player.keys[b.needKey]>0){ player.keys[b.needKey]--; startBattle({ ...b }); addSys(`🔓 Использован ${b.needKey}.`); panel.classList.add("hidden"); } else addSys(`❌ Нужен ${b.needKey}!`); });
-        document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
-    function shop() { if(!player.class) return; let items = WEAPONS[player.class]; let panel=document.getElementById("dynamicPanel"); panel.innerHTML=`<strong>🏪 МАГАЗИН (${player.class==="warrior"?"Воин":player.class==="mage"?"Маг":"Лучник"})</strong><div class="select-list">`+items.map((w,i)=>`<div class="shop-item" data-idx="${i}">${w.name} +${w.dmg} ур. - ${w.cost}💰</div>`).join('')+`</div><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden");
-        document.querySelectorAll(".shop-item").forEach(el=>el.onclick=()=>{ let idx=parseInt(el.dataset.idx); let w=WEAPONS[player.class][idx]; if(w.cost===0) { addSys(`Стартовое оружие`); return; } if(player.gold>=w.cost){ player.gold-=w.cost; player.weapon={name:w.name,dmg:w.dmg}; addSys(`✅ Куплено: ${w.name}!`); updateUI(); saveGame(); panel.classList.add("hidden");} else addSys(`Не хватает`); });
-        document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
-    function showInventory() { let panel=document.getElementById("dynamicPanel"); panel.innerHTML=`<strong>📦 ИНВЕНТАРЬ</strong><br>Оружие: ${player.weapon?.name||"нет"} (урон +${player.weapon?.dmg||0})<br>🔑 Ключи: ${Object.entries(player.keys).filter(k=>k[1]>0).map(k=>`${k[0]}:${k[1]}`).join(", ")||"нет"}<br>📦 Материалы: ${Object.entries(player.materials).filter(m=>m[1]>0).map(m=>`${m[0]}:${m[1]}`).join(", ")||"пусто"}<br><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden"); document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
-    function showCraft() { if(!player.class) return; let crafts=getCraftsByClass(player.class); let panel=document.getElementById("dynamicPanel"); panel.innerHTML=`<strong>⚙️ КРАФТ</strong><div class="select-list">`+crafts.map((c,i)=>`<div class="craft-item" data-idx="${i}" data-name="${c.name}" data-weapon="${c.weaponName}" data-dmg="${c.dmg}" data-req='${JSON.stringify(c.items)}'><b>${c.name}</b> <span class="craft-damage">⚔️ +${c.dmg} урона</span><br><span class="craft-recipe">📦 Требуется: ${c.items.map(it=>`${it.name} x${it.qty}`).join(', ')}</span></div>`).join('')+`</div><button id="closePanel">Закрыть</button>`; panel.classList.remove("hidden");
-        document.querySelectorAll(".craft-item").forEach(el=>el.onclick=()=>{ let reqs=JSON.parse(el.dataset.req); let ok=true; for(let r of reqs) if((player.materials[r.name]||0)<r.qty) ok=false; if(!ok){addSys("❌ Не хватает материалов"); return;} for(let r of reqs) player.materials[r.name]-=r.qty; let newDmg=parseInt(el.dataset.dmg); let newName=el.dataset.weapon; player.weapon={name:newName,dmg:newDmg}; addSys(`✨ Вы скрафтили ${newName} (+${newDmg} урона)!`); updateUI(); saveGame(); panel.classList.add("hidden"); });
-        document.getElementById("closePanel").onclick=()=>panel.classList.add("hidden"); }
-    function setClass(cn) { if(player.class) return; player.class=cn; player.weapon=WEAPONS[player.class][0]; if(cn==="warrior"){player.maxHp=260;player.hp=260;player.maxMp=40;player.mp=40;} else if(cn==="mage"){player.maxHp=180;player.hp=180;player.maxMp=110;player.mp=110;} else{player.maxHp=210;player.hp=210;player.maxMp=60;player.mp=60;} addSys(`🎭 Класс: ${cn.toUpperCase()}. Оружие: ${player.weapon.name} (+${player.weapon.dmg} урона)`); updateUI(); saveGame(); }
-    function statsCmd(){ addSys(`Ур.${player.level} ❤️${Math.floor(player.hp)}/${player.maxHp} 💙${Math.floor(player.mp)}/${player.maxMp} ⚔️Урон ${player.weapon?player.weapon.dmg+Math.floor(player.level*1.2):10} 🪙${Math.floor(player.gold)}`); }
-    function secretBoss() { addSys(`🌌 Ты прошептал древнее заклинание...`); startBattle({ name: "🌀 Хранитель Бездны", hp: 40000+player.level*150, atk: 2000+player.level*8, gold: 80000, xp: 40000, drops: [{ weapon: "🌀 Клинок Хаоса", class: "warrior", chance: 0.4 },{ weapon: "🌀 Кристалл бездны", class: "mage", chance: 0.4 },{ weapon: "🌀 Стрела хаоса", class: "archer", chance: 0.4 }] }); }
-    function processCmd(cmd) { let c = cmd.toLowerCase().trim(); if(c === "статы") statsCmd(); else if(c === "помощь") addSys(`статы, помощь`); else if(c === SECRET_BOSS_COMMAND) secretBoss(); else addSys(`❓ Неизвестно.`); }
-    function saveGame() { localStorage.setItem("TV_SAVE_FULL", JSON.stringify({ class:player.class, level:player.level, xp:player.xp, gold:player.gold, hp:player.hp, maxHp:player.maxHp, mp:player.mp, maxMp:player.maxMp, weapon:player.weapon, keys:player.keys, materials:player.materials })); }
-    function loadGame() {
-        let raw = localStorage.getItem("TV_SAVE_FULL");
-        if(raw){ let d=JSON.parse(raw); player.class=d.class; player.level=d.level; player.xp=d.xp; player.gold=d.gold; player.hp=d.hp; player.maxHp=d.maxHp; player.mp=d.mp; player.maxMp=d.maxMp; player.weapon=d.weapon; player.keys=d.keys||player.keys; player.materials=d.materials||player.materials; addSys("📀 Загружено."); updateUI(); } 
-        else { document.getElementById("dynamicPanel").innerHTML=`<div class="class-selector"><div class="class-btn" id="classWar">⚔️ ВОИН</div><div class="class-btn" id="classMage">🔮 МАГ</div><div class="class-btn" id="classArch">🏹 ЛУЧНИК</div></div>`; document.getElementById("dynamicPanel").classList.remove("hidden"); document.getElementById("classWar").onclick=()=>{setClass("warrior"); document.getElementById("dynamicPanel").classList.add("hidden");}; document.getElementById("classMage").onclick=()=>{setClass("mage"); document.getElementById("dynamicPanel").classList.add("hidden");}; document.getElementById("classArch").onclick=()=>{setClass("archer"); document.getElementById("dynamicPanel").classList.add("hidden");}; }
-        updateUI();
-    }
-    document.getElementById("questBtn").onclick=()=>{if(player.class) showQuests(); else addSys("Выберите класс!");};
-    document.getElementById("bossListBtn").onclick=()=>{if(player.class) showBosses(); else addSys("Выберите класс!");};
-    document.getElementById("attackBtn").onclick=attack;
-    document.getElementById("autoAttackBtn").onclick=toggleAutoAttack;
-    document.getElementById("healBtn").onclick=heal;
-    document.getElementById("autoHealBtn").onclick=toggleAutoHeal;
-    document.getElementById("shopBtn").onclick=shop;
-    document.getElementById("inventoryBtn").onclick=showInventory;
-    document.getElementById("craftBtn").onclick=showCraft;
-    document.getElementById("sendBtn").onclick=()=>{ let inp=document.getElementById("cmdInput"); processCmd(inp.value); inp.value=""; };
-    loadGame();
-    setInterval(()=>{ if(player.inBattle && player.currentEnemy && player.currentEnemy.hp>0 && player.hp>0) enemyAttack(); }, 4000);
-</script>
-</body>
-</html>
+            { name: "🌀 Стрела хаоса", weaponName: "🌀 Стрела хаоса",
