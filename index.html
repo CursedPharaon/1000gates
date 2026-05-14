@@ -133,6 +133,11 @@
         .craft-damage { font-size: 0.65rem; color: #ffaa66; font-weight: bold; margin-left: 6px; }
         .shop-item { background: #162336; padding: 6px 10px; border-radius: 40px; margin: 3px; cursor: pointer; font-size: 0.7rem; display: flex; justify-content: space-between; }
         hr { border-color: #2e4b6e; margin: 5px; }
+        .promo-btn {
+            background: #4a2e6e;
+            grid-column: span 2;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -167,6 +172,7 @@
         <button id="shopBtn">🏪 МАГАЗИН</button>
         <button id="inventoryBtn">📦 ИНВЕНТАРЬ</button>
         <button id="craftBtn">⚙️ КРАФТ</button>
+        <button id="promoBtn" class="promo-btn">🎁 ПРОМОКОД</button>
     </div>
 
     <div class="input-area">
@@ -176,6 +182,21 @@
 </div>
 
 <script>
+    // ======================== // ПРОМОКОДЫ // ========================
+    // Список промокодов. Игроки их НЕ ВИДЯТ. Меняй и добавляй смело.
+    // Формат: "название_промо", money: число, exp: число, health: число, mana: число, keyBonus: "название ключа", keyQty: число, materialBonus: "название материала", materialQty: число
+    const PROMO_CODES = [
+        { code: "TEMPLATE", name: "Тестовый шаблон", money: 1, exp: 1, health: 1, mana: 1, keyBonus: "Медный ключ", keyQty: 1, materialBonus: "Осколок магмы", materialQty: 1 },
+			{ code: "BETA", name: "Открытие проекта!", money: 850, exp: 150, keyBonus: "Медный ключ", keyQty: 2, materialBonus: "Эссенция Тьмы", materialQty: 4 },
+        { code: "WELCOME", name: "Приветственный бонус", money: 500, exp: 100, health: 0, mana: 0 },
+        { code: "GOLDENKEY", name: "Золотой сундук", money: 1000, exp: 250, keyBonus: "Золотой ключ", keyQty: 1 },
+        { code: "MAGICBOOST", name: "Магический всплеск", money: 300, exp: 150, mana: 30 },
+        { code: "HEALTHPACK", name: "Целитель", money: 150, exp: 50, health: 50 },
+        { code: "DRAGONCRY", name: "Рёв дракона", money: 2500, exp: 500, keyBonus: "Драконий ключ", keyQty: 1, materialBonus: "Рунический камень", materialQty: 3 },
+        { code: "SHADOW", name: "Теневой дар", money: 1200, exp: 300, materialBonus: "Теневые нити", materialQty: 5 }
+    ];
+    // ==================================================================
+
     const SECRET_BOSS_COMMAND = "открой врата";
 
     const WEAPONS = {
@@ -331,7 +352,8 @@
         class: null, level: 1, xp: 0, gold: 800, hp: 200, maxHp: 200, mp: 50, maxMp: 50,
         weapon: null, keys: { "Медный ключ": 0, "Серебряный ключ": 0, "Золотой ключ": 0, "Пламенный ключ": 0, "Ледяной ключ": 0, "Кровавый ключ": 0, "Магический ключ": 0, "Рунический ключ": 0, "Призрачный ключ": 0, "Драконий ключ": 0, "Адский ключ": 0, "Небесный ключ": 0 },
         materials: { "Осколок магмы": 0, "Рунический камень": 0, "Ледяной осколок": 0, "Древний пергамент": 0, "Теневые нити": 0, "Эссенция тьмы": 0, "Лунная пыль": 0 },
-        inBattle: false, currentEnemy: null, autoAttack: false, autoHeal: false, attackInterval: null, healInterval: null
+        inBattle: false, currentEnemy: null, autoAttack: false, autoHeal: false, attackInterval: null, healInterval: null,
+        usedPromoCodes: []
     };
 
     function addSys(msg) { let chat = document.getElementById("chatArea"); let d = document.createElement("div"); d.className = "msg system"; d.innerHTML = msg; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; }
@@ -401,11 +423,71 @@
     function setClass(cn) { if(player.class) return; player.class=cn; player.weapon=WEAPONS[player.class][0]; if(cn==="warrior"){player.maxHp=260;player.hp=260;player.maxMp=40;player.mp=40;} else if(cn==="mage"){player.maxHp=180;player.hp=180;player.maxMp=110;player.mp=110;} else{player.maxHp=210;player.hp=210;player.maxMp=60;player.mp=60;} addSys(`🎭 Класс: ${cn.toUpperCase()}. Оружие: ${player.weapon.name} (+${player.weapon.dmg} урона)`); updateUI(); saveGame(); }
     function statsCmd(){ addSys(`Ур.${player.level} ❤️${Math.floor(player.hp)}/${player.maxHp} 💙${Math.floor(player.mp)}/${player.maxMp} ⚔️Урон ${player.weapon?player.weapon.dmg+Math.floor(player.level*1.2):10} 🪙${Math.floor(player.gold)}`); }
     function secretBoss() { addSys(`🌌 Ты прошептал древнее заклинание...`); startBattle({ name: "🌀 Хранитель Бездны", hp: 40000+player.level*150, atk: 2000+player.level*8, gold: 80000, xp: 40000, drops: [{ weapon: "🌀 Клинок Хаоса", class: "warrior", chance: 0.4 },{ weapon: "🌀 Кристалл бездны", class: "mage", chance: 0.4 },{ weapon: "🌀 Стрела хаоса", class: "archer", chance: 0.4 }] }); }
-    function processCmd(cmd) { let c = cmd.toLowerCase().trim(); if(c === "статы") statsCmd(); else if(c === "помощь") addSys(`статы, помощь`); else if(c === SECRET_BOSS_COMMAND) secretBoss(); else addSys(`❓ Неизвестно.`); }
-    function saveGame() { localStorage.setItem("TV_SAVE_FULL", JSON.stringify({ class:player.class, level:player.level, xp:player.xp, gold:player.gold, hp:player.hp, maxHp:player.maxHp, mp:player.mp, maxMp:player.maxMp, weapon:player.weapon, keys:player.keys, materials:player.materials })); }
+    
+    function activatePromo(code) {
+        let found = PROMO_CODES.find(p => p.code.toLowerCase() === code.toLowerCase());
+        if (!found) { addSys(`❌ Промокод "${code}" не найден!`); return false; }
+        if (player.usedPromoCodes.includes(found.code)) { addSys(`⚠️ Промокод "${found.name}" уже был активирован!`); return false; }
+        
+        let rewardsMsg = [];
+        if (found.money && found.money > 0) { player.gold += found.money; rewardsMsg.push(`💰 ${found.money} золота`); }
+        if (found.exp && found.exp > 0) { player.xp += found.exp; rewardsMsg.push(`✨ ${found.exp} опыта`); }
+        if (found.health && found.health > 0) { player.hp = Math.min(player.maxHp, player.hp + found.health); rewardsMsg.push(`❤️ +${found.health} здоровья`); }
+        if (found.mana && found.mana > 0) { player.mp = Math.min(player.maxMp, player.mp + found.mana); rewardsMsg.push(`💙 +${found.mana} маны`); }
+        if (found.keyBonus && found.keyQty) { player.keys[found.keyBonus] = (player.keys[found.keyBonus] || 0) + found.keyQty; rewardsMsg.push(`🔑 ${found.keyQty}x ${found.keyBonus}`); }
+        if (found.materialBonus && found.materialQty) { player.materials[found.materialBonus] = (player.materials[found.materialBonus] || 0) + found.materialQty; rewardsMsg.push(`📦 ${found.materialQty}x ${found.materialBonus}`); }
+        
+        if (rewardsMsg.length === 0) rewardsMsg.push("🎁 (нет наград)");
+        addSys(`🎉 Промокод "${found.name}" активирован! Получено: ${rewardsMsg.join(", ")}`);
+        
+        player.usedPromoCodes.push(found.code);
+        
+        let need = 100 + player.level * 12;
+        while (player.xp >= need) {
+            player.level++;
+            player.xp -= need;
+            player.maxHp += 20;
+            player.hp = player.maxHp;
+            addSys(`✨ УРОВЕНЬ ${player.level}!`);
+            need = 100 + player.level * 12;
+        }
+        if (player.hp > player.maxHp) player.hp = player.maxHp;
+        if (player.mp > player.maxMp) player.mp = player.maxMp;
+        updateUI();
+        saveGame();
+        return true;
+    }
+    
+    function showPromoUI() {
+        let panel = document.getElementById("dynamicPanel");
+        // ЗДЕСЬ НЕТ СПИСКА ПРОМОКОДОВ. Только поле ввода.
+        panel.innerHTML = `<strong>🎁 Введите промокод</strong><br><input type="text" id="promoInputField" placeholder="Введите промокод..." style="width:100%; margin: 10px 0;"><button id="submitPromoBtn">Активировать</button><br><br><button id="closePanel">Закрыть</button>`;
+        panel.classList.remove("hidden");
+        document.getElementById("submitPromoBtn").onclick = () => {
+            let inputField = document.getElementById("promoInputField");
+            let val = inputField.value.trim();
+            if (val) activatePromo(val);
+            else addSys("❌ Введите промокод.");
+            inputField.value = "";
+            panel.classList.add("hidden");
+        };
+        document.getElementById("closePanel").onclick = () => panel.classList.add("hidden");
+    }
+    
+    function processCmd(cmd) { 
+        let c = cmd.toLowerCase().trim();
+        let foundPromo = PROMO_CODES.find(p => p.code.toLowerCase() === c);
+        if (foundPromo) { activatePromo(foundPromo.code); return; }
+        
+        if(c === "статы") statsCmd();
+        else if(c === "помощь") addSys(`статы, помощь`);
+        else if(c === SECRET_BOSS_COMMAND) secretBoss();
+        else addSys(`❓ Неизвестно.`); 
+    }
+    function saveGame() { localStorage.setItem("TV_SAVE_FULL", JSON.stringify({ class:player.class, level:player.level, xp:player.xp, gold:player.gold, hp:player.hp, maxHp:player.maxHp, mp:player.mp, maxMp:player.maxMp, weapon:player.weapon, keys:player.keys, materials:player.materials, usedPromoCodes:player.usedPromoCodes })); }
     function loadGame() {
         let raw = localStorage.getItem("TV_SAVE_FULL");
-        if(raw){ let d=JSON.parse(raw); player.class=d.class; player.level=d.level; player.xp=d.xp; player.gold=d.gold; player.hp=d.hp; player.maxHp=d.maxHp; player.mp=d.mp; player.maxMp=d.maxMp; player.weapon=d.weapon; player.keys=d.keys||player.keys; player.materials=d.materials||player.materials; addSys("📀 Загружено."); updateUI(); } 
+        if(raw){ let d=JSON.parse(raw); player.class=d.class; player.level=d.level; player.xp=d.xp; player.gold=d.gold; player.hp=d.hp; player.maxHp=d.maxHp; player.mp=d.mp; player.maxMp=d.maxMp; player.weapon=d.weapon; player.keys=d.keys||player.keys; player.materials=d.materials||player.materials; player.usedPromoCodes=d.usedPromoCodes||[]; addSys("📀 Загружено."); updateUI(); } 
         else { document.getElementById("dynamicPanel").innerHTML=`<div class="class-selector"><div class="class-btn" id="classWar">⚔️ ВОИН</div><div class="class-btn" id="classMage">🔮 МАГ</div><div class="class-btn" id="classArch">🏹 ЛУЧНИК</div></div>`; document.getElementById("dynamicPanel").classList.remove("hidden"); document.getElementById("classWar").onclick=()=>{setClass("warrior"); document.getElementById("dynamicPanel").classList.add("hidden");}; document.getElementById("classMage").onclick=()=>{setClass("mage"); document.getElementById("dynamicPanel").classList.add("hidden");}; document.getElementById("classArch").onclick=()=>{setClass("archer"); document.getElementById("dynamicPanel").classList.add("hidden");}; }
         updateUI();
     }
@@ -418,6 +500,7 @@
     document.getElementById("shopBtn").onclick=shop;
     document.getElementById("inventoryBtn").onclick=showInventory;
     document.getElementById("craftBtn").onclick=showCraft;
+    document.getElementById("promoBtn").onclick=showPromoUI;
     document.getElementById("sendBtn").onclick=()=>{ let inp=document.getElementById("cmdInput"); processCmd(inp.value); inp.value=""; };
     loadGame();
     setInterval(()=>{ if(player.inBattle && player.currentEnemy && player.currentEnemy.hp>0 && player.hp>0) enemyAttack(); }, 4000);
