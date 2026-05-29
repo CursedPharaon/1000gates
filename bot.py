@@ -351,7 +351,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "enemy_hp": boss["hp"]
         }
         
-        text = f"⚔️ *ЭЛИТНЫЙ БОСС: {boss['name']}*\n❤️ {boss['hp']}/{boss['hp']} HP\n⚔️ Атака: {boss['atk']}\n\n💰 Награда: {boss['gold']} золота, {boss['xp']} опыта, {boss['glory']} славы\n📦 Материалы: {', '.join([f'{m["name"]} x{m["qty"]}' for m in boss['materials']])}"
+        materials_text = ', '.join([f"{m['name']} x{m['qty']}" for m in boss['materials']])
+    text = f"⚔️ *ЭЛИТНЫЙ БОСС: {boss['name']}*\n❤️ {boss['hp']}/{boss['hp']} HP\n⚔️ Атака: {boss['atk']}\n\n💰 Награда: {boss['gold']} золота, {boss['xp']} опыта, {boss['glory']} славы\n📦 Материалы: {materials_text}"
         
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
         return
