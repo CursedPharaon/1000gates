@@ -1,6 +1,7 @@
 import asyncio
 import random
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from supabase import create_client, Client
@@ -10,25 +11,40 @@ BOT_TOKEN = "8858271245:AAHMRubTDf_-_cmraJyW18Ka6w4VpDSP_JQ"
 SUPABASE_URL = "https://tmjqafqecjpizawdruzq.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtanFhZnFlY2pwaXphd2RydXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4OTk2OTYsImV4cCI6MjA5NTQ3NTY5Nn0.8K7i5QEbjYWSvqw78P8RSR_abYM8uCRZbvC9Hp12bac"
 
-# Инициализация Supabase
+# Админ (твой Telegram ID или username)
+ADMIN_USERNAME = "cursed_pharaon"
+
+logging.basicConfig(level=logging.INFO)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ========== ДАННЫЕ ИГРЫ ==========
-ENEMIES = [
-    {"name": "🍄 Лесной тролль", "hp": 280, "atk": 32, "gold": 110, "xp": 52, "glory": 6},
-    {"name": "🔥 Огненный элементаль", "hp": 340, "atk": 41, "gold": 150, "xp": 70, "glory": 9},
-    {"name": "⚔️ Теневой рыцарь", "hp": 430, "atk": 55, "gold": 210, "xp": 105, "glory": 14},
-    {"name": "❄️ Ледяной голем", "hp": 510, "atk": 68, "gold": 280, "xp": 140, "glory": 18},
-    {"name": "💀 Древний скелет", "hp": 470, "atk": 72, "gold": 310, "xp": 160, "glory": 21},
-    {"name": "🐉 Пустынный дракон", "hp": 640, "atk": 92, "gold": 440, "xp": 230, "glory": 29},
-    {"name": "🌀 Магистр хаоса", "hp": 580, "atk": 98, "gold": 490, "xp": 260, "glory": 33},
-    {"name": "🪨 Каменный титан", "hp": 790, "atk": 115, "gold": 660, "xp": 360, "glory": 41},
-    {"name": "👑 Король орков", "hp": 710, "atk": 108, "gold": 610, "xp": 330, "glory": 38},
-    {"name": "⚡ Громовой дух", "hp": 860, "atk": 128, "gold": 790, "xp": 440, "glory": 50},
-    {"name": "🌋 Владыка магмы", "hp": 1020, "atk": 152, "gold": 980, "xp": 550, "glory": 65},
-    {"name": "🐉 Изначальный дракон", "hp": 1250, "atk": 185, "gold": 1350, "xp": 760, "glory": 85}
+# КВЕСТЫ (12 штук)
+QUESTS = [
+    {"id": 0, "name": "🍄 Лесной тролль", "hp": 280, "atk": 32, "gold": 110, "xp": 52, "glory": 6, "key": "Медный ключ", "key_chance": 0.6, "materials": [{"name": "Троллья кровь", "qty": 1, "chance": 0.8}]},
+    {"id": 1, "name": "🔥 Огненный элементаль", "hp": 340, "atk": 41, "gold": 150, "xp": 70, "glory": 9, "key": "Огненный ключ", "key_chance": 0.55, "materials": [{"name": "Пламенный цветок", "qty": 1, "chance": 0.7}]},
+    {"id": 2, "name": "⚔️ Теневой рыцарь", "hp": 430, "atk": 55, "gold": 210, "xp": 105, "glory": 14, "key": "Теневой ключ", "key_chance": 0.5, "materials": [{"name": "Теневые нити", "qty": 2, "chance": 0.9}]},
+    {"id": 3, "name": "❄️ Ледяной голем", "hp": 510, "atk": 68, "gold": 280, "xp": 140, "glory": 18, "key": "Ледяной ключ", "key_chance": 0.45, "materials": [{"name": "Ледяной осколок", "qty": 2, "chance": 0.8}]},
+    {"id": 4, "name": "💀 Древний скелет", "hp": 470, "atk": 72, "gold": 310, "xp": 160, "glory": 21, "key": "Костяной ключ", "key_chance": 0.4, "materials": [{"name": "Древняя кость", "qty": 3, "chance": 0.9}]},
+    {"id": 5, "name": "🐉 Пустынный дракон", "hp": 640, "atk": 92, "gold": 440, "xp": 230, "glory": 29, "key": "Драконий ключ", "key_chance": 0.35, "materials": [{"name": "Драконья чешуя", "qty": 1, "chance": 0.6}]},
+    {"id": 6, "name": "🌀 Магистр хаоса", "hp": 580, "atk": 98, "gold": 490, "xp": 260, "glory": 33, "key": "Магический ключ", "key_chance": 0.3, "materials": [{"name": "Древний пергамент", "qty": 1, "chance": 0.7}]},
+    {"id": 7, "name": "🪨 Каменный титан", "hp": 790, "atk": 115, "gold": 660, "xp": 360, "glory": 41, "key": "Рунический ключ", "key_chance": 0.25, "materials": [{"name": "Рунический камень", "qty": 2, "chance": 0.8}]},
+    {"id": 8, "name": "👑 Король орков", "hp": 710, "atk": 108, "gold": 610, "xp": 330, "glory": 38, "key": "Королевский ключ", "key_chance": 0.3, "materials": [{"name": "Трофей орка", "qty": 2, "chance": 0.9}]},
+    {"id": 9, "name": "⚡ Громовой дух", "hp": 860, "atk": 128, "gold": 790, "xp": 440, "glory": 50, "key": "Громовой ключ", "key_chance": 0.2, "materials": [{"name": "Эссенция бури", "qty": 1, "chance": 0.6}]},
+    {"id": 10, "name": "🌋 Владыка магмы", "hp": 1020, "atk": 152, "gold": 980, "xp": 550, "glory": 65, "key": "Магмовый ключ", "key_chance": 0.15, "materials": [{"name": "Осколок магмы", "qty": 3, "chance": 0.9}]},
+    {"id": 11, "name": "🐉 Изначальный дракон", "hp": 1250, "atk": 185, "gold": 1350, "xp": 760, "glory": 85, "key": "Древний ключ", "key_chance": 0.1, "materials": [{"name": "Драконье сердце", "qty": 1, "chance": 0.5}]}
 ]
 
+# ЭЛИТНЫЕ БОССЫ (нужны ключи)
+ELITE_BOSSES = [
+    {"name": "🗿 Каменный страж", "hp": 800, "atk": 70, "gold": 500, "xp": 250, "glory": 30, "need_key": "Медный ключ", "materials": [{"name": "Осколок магмы", "qty": 2}]},
+    {"name": "❄️ Ледяной дракон", "hp": 1200, "atk": 95, "gold": 750, "xp": 380, "glory": 45, "need_key": "Огненный ключ", "materials": [{"name": "Ледяной осколок", "qty": 2}]},
+    {"name": "💀 Лич Некромант", "hp": 1800, "atk": 130, "gold": 1100, "xp": 550, "glory": 60, "need_key": "Теневой ключ", "materials": [{"name": "Теневые нити", "qty": 3}]},
+    {"name": "🐉 Древний виверн", "hp": 2500, "atk": 170, "gold": 1600, "xp": 800, "glory": 80, "need_key": "Драконий ключ", "materials": [{"name": "Драконья чешуя", "qty": 3}]},
+    {"name": "🌋 Повелитель магмы", "hp": 3400, "atk": 220, "gold": 2300, "xp": 1150, "glory": 110, "need_key": "Магмовый ключ", "materials": [{"name": "Осколок магмы", "qty": 5}]},
+    {"name": "👑 Король драконов", "hp": 5000, "atk": 300, "gold": 3500, "xp": 1800, "glory": 160, "need_key": "Древний ключ", "materials": [{"name": "Драконье сердце", "qty": 2}]}
+]
+
+# ОРУЖИЕ
 WEAPONS = [
     {"name": "⚔️ Ржавый меч", "dmg": 12, "cost": 0},
     {"name": "🗡️ Стальной клинок", "dmg": 24, "cost": 480},
@@ -42,18 +58,15 @@ WEAPONS = [
     {"name": "🌌 Артефакт древних", "dmg": 280, "cost": 17000}
 ]
 
-# Хранилище текущих боёв (user_id -> enemy_index, enemy_hp)
+# Хранилище активных боёв
 active_battles = {}
 
-# ========== РАБОТА С БАЗОЙ ДАННЫХ ==========
+# ========== РАБОТА С БАЗОЙ ==========
 async def get_or_create_player(user_id: int, username: str):
-    """Получить игрока из БД или создать нового"""
     response = supabase.table("players").select("*").eq("username", str(user_id)).execute()
-    
     if response.data:
         return response.data[0]
     else:
-        # Создаём нового игрока
         new_player = {
             "username": str(user_id),
             "name": username,
@@ -70,13 +83,14 @@ async def get_or_create_player(user_id: int, username: str):
             "talent_dmg": 0,
             "talent_crit": 0,
             "talent_hp": 0,
-            "talent_points": 1
+            "talent_points": 1,
+            "keys": {},  # JSON поле для ключей
+            "materials": {}  # JSON поле для материалов
         }
-        response = supabase.table("players").insert(new_player).execute()
-        return response.data[0]
+        supabase.table("players").insert(new_player).execute()
+        return new_player
 
 async def save_player(user_id: int, player_data: dict):
-    """Сохранить данные игрока"""
     supabase.table("players").update(player_data).eq("username", str(user_id)).execute()
 
 # ========== ИГРОВЫЕ РАСЧЁТЫ ==========
@@ -85,7 +99,6 @@ def get_player_damage(player):
     upgrade = player.get("weapon_upgrade", 0)
     talent_dmg = player.get("talent_dmg", 0)
     level = player.get("level", 1)
-    
     base = weapon_dmg + upgrade * 5 + level * 2 + talent_dmg * 4
     return random.randint(base, base + 12)
 
@@ -98,8 +111,19 @@ def get_max_hp(player):
     talent_hp = player.get("talent_hp", 0)
     return int(base_hp * (1 + talent_hp * 0.05))
 
+def get_keys_text(player):
+    keys = player.get("keys", {})
+    if not keys:
+        return "нет"
+    return ", ".join([f"{k}: {v}" for k, v in keys.items()])
+
+def get_materials_text(player):
+    mats = player.get("materials", {})
+    if not mats:
+        return "нет"
+    return ", ".join([f"{k}: {v}" for k, v in mats.items()])
+
 def get_player_stats_text(player):
-    """Текст со статистикой игрока"""
     max_hp = get_max_hp(player)
     dmg = get_player_damage(player)
     crit = get_crit_chance(player) * 100
@@ -116,32 +140,41 @@ def get_player_stats_text(player):
     text += f"\n🪙 {player.get('gold', 0)} золота\n"
     text += f"✨ {player.get('glory', 0)} славы\n"
     text += f"⭐ Очков талантов: {player.get('talent_points', 0)}\n"
-    text += f"📊 Опыт: {player.get('xp', 0)}/{100 + player.get('level', 1) * 15}"
+    text += f"📊 Опыт: {player.get('xp', 0)}/{100 + player.get('level', 1) * 15}\n"
+    text += f"🔑 Ключи: {get_keys_text(player)}\n"
+    text += f"📦 Материалы: {get_materials_text(player)}"
     return text
-
-def get_enemy_text(enemy, current_hp):
-    """Текст врага"""
-    percent = (current_hp / enemy["hp"]) * 100
-    bar = "█" * int(percent // 10) + "░" * (10 - int(percent // 10))
-    return f"*{enemy['name']}*\n❤️ {bar} {current_hp}/{enemy['hp']} HP"
 
 # ========== КЛАВИАТУРЫ ==========
 def get_main_keyboard():
-    """Главная клавиатура (в бою)"""
     keyboard = [
-        [InlineKeyboardButton("⚔️ АТАКА", callback_data="attack")],
-        [InlineKeyboardButton("💚 ЛЕЧЕНИЕ", callback_data="heal")],
-        [InlineKeyboardButton("🔨 ЗАТОЧКА +1", callback_data="upgrade")],
-        [InlineKeyboardButton("🌀 СМЕНА ВРАГА", callback_data="next_enemy")],
+        [InlineKeyboardButton("📜 КВЕСТЫ", callback_data="quests")],
+        [InlineKeyboardButton("👑 ЭЛИТНЫЕ БОССЫ", callback_data="elite_bosses")],
         [InlineKeyboardButton("🏪 МАГАЗИН", callback_data="shop"),
          InlineKeyboardButton("⭐ ТАЛАНТЫ", callback_data="talents")],
         [InlineKeyboardButton("📦 СТАТЫ", callback_data="stats"),
-         InlineKeyboardButton("🏆 ТОП", callback_data="top")]
+         InlineKeyboardButton("🏆 ТОП", callback_data="top")],
+        [InlineKeyboardButton("🔨 ЗАТОЧКА +1", callback_data="upgrade")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
+def get_quests_keyboard():
+    keyboard = []
+    for q in QUESTS:
+        keyboard.append([InlineKeyboardButton(q["name"], callback_data=f"quest_{q['id']}")])
+    keyboard.append([InlineKeyboardButton("◀️ НАЗАД", callback_data="back")])
+    return InlineKeyboardMarkup(keyboard)
+
+def get_elite_keyboard(player):
+    keyboard = []
+    for i, b in enumerate(ELITE_BOSSES):
+        has_key = player.get("keys", {}).get(b["need_key"], 0) > 0
+        status = "✅" if has_key else "🔒"
+        keyboard.append([InlineKeyboardButton(f"{status} {b['name']} (нужен {b['need_key']})", callback_data=f"elite_{i}")])
+    keyboard.append([InlineKeyboardButton("◀️ НАЗАД", callback_data="back")])
+    return InlineKeyboardMarkup(keyboard)
+
 def get_shop_keyboard():
-    """Клавиатура магазина"""
     keyboard = []
     for i, w in enumerate(WEAPONS):
         keyboard.append([InlineKeyboardButton(f"{w['name']} +{w['dmg']} — {w['cost']}💰", callback_data=f"buy_{i}")])
@@ -149,7 +182,6 @@ def get_shop_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 def get_talents_keyboard():
-    """Клавиатура талантов"""
     keyboard = [
         [InlineKeyboardButton("💪 СИЛА (+урон)", callback_data="talent_dmg")],
         [InlineKeyboardButton("🎯 МЕТКОСТЬ (+крит)", callback_data="talent_crit")],
@@ -158,26 +190,107 @@ def get_talents_keyboard():
     ]
     return InlineKeyboardMarkup(keyboard)
 
-def get_back_keyboard():
-    """Только кнопка назад"""
-    keyboard = [[InlineKeyboardButton("◀️ НАЗАД", callback_data="back")]]
+def get_battle_keyboard():
+    keyboard = [
+        [InlineKeyboardButton("⚔️ АТАКА", callback_data="attack"),
+         InlineKeyboardButton("💚 ЛЕЧЕНИЕ", callback_data="heal")],
+        [InlineKeyboardButton("🚪 СДАЧА", callback_data="surrender")]
+    ]
     return InlineKeyboardMarkup(keyboard)
 
-# ========== ОБРАБОТЧИКИ КОМАНД ==========
+def get_back_keyboard():
+    return InlineKeyboardMarkup([[InlineKeyboardButton("◀️ НАЗАД", callback_data="back")]])
+
+# ========== АДМИН-КОМАНДЫ ==========
+async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.username != ADMIN_USERNAME and user.username != "cursed_pharaon":
+        await update.message.reply_text("❌ У вас нет прав администратора!")
+        return
+    
+    args = context.args
+    if len(args) < 3:
+        await update.message.reply_text("❌ Использование: /админ <команда> <username> <значение>\n\nКоманды:\nлвл, голд, слава, хп, урон, броня, ключ, материал")
+        return
+    
+    cmd = args[0].lower()
+    target_name = args[1]
+    value = args[2]
+    
+    # Получаем игрока
+    response = supabase.table("players").select("*").eq("username", target_name).execute()
+    if not response.data:
+        await update.message.reply_text(f"❌ Игрок {target_name} не найден!")
+        return
+    
+    player = response.data[0]
+    
+    try:
+        if cmd == "лвл":
+            new_level = int(value)
+            player["level"] = new_level
+            player["max_hp"] = 210 + (new_level - 1) * 20
+            player["hp"] = player["max_hp"]
+            await update.message.reply_text(f"✅ Игроку {target_name} установлен уровень {new_level}")
+        
+        elif cmd == "голд":
+            player["gold"] = int(value)
+            await update.message.reply_text(f"✅ Игроку {target_name} установлено золото {value}")
+        
+        elif cmd == "слава":
+            player["glory"] = int(value)
+            await update.message.reply_text(f"✅ Игроку {target_name} установлена слава {value}")
+        
+        elif cmd == "хп":
+            player["hp"] = int(value)
+            player["max_hp"] = int(value)
+            await update.message.reply_text(f"✅ Игроку {target_name} установлено HP {value}")
+        
+        elif cmd == "урон":
+            player["weapon_dmg"] = int(value)
+            await update.message.reply_text(f"✅ Игроку {target_name} установлен урон оружия {value}")
+        
+        elif cmd == "броня":
+            # Добавляем поле armor если нет
+            player["armor"] = int(value)
+            await update.message.reply_text(f"✅ Игроку {target_name} установлена броня {value}")
+        
+        elif cmd == "ключ":
+            # /админ ключ username Ключ_название 5
+            key_name = args[2]
+            key_qty = int(args[3]) if len(args) > 3 else 1
+            keys = player.get("keys", {})
+            keys[key_name] = keys.get(key_name, 0) + key_qty
+            player["keys"] = keys
+            await update.message.reply_text(f"✅ Игроку {target_name} добавлен ключ {key_name} x{key_qty}")
+        
+        elif cmd == "материал":
+            # /админ материал username Название 5
+            mat_name = args[2]
+            mat_qty = int(args[3]) if len(args) > 3 else 1
+            mats = player.get("materials", {})
+            mats[mat_name] = mats.get(mat_name, 0) + mat_qty
+            player["materials"] = mats
+            await update.message.reply_text(f"✅ Игроку {target_name} добавлен материал {mat_name} x{mat_qty}")
+        
+        else:
+            await update.message.reply_text("❌ Неизвестная команда. Доступно: лвл, голд, слава, хп, урон, броня, ключ, материал")
+            return
+        
+        # Сохраняем изменения
+        supabase.table("players").update(player).eq("username", target_name).execute()
+        
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {e}")
+
+# ========== ОБРАБОТЧИКИ ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     player = await get_or_create_player(user.id, user.first_name)
     
-    # Создаём первого врага
-    enemy = ENEMIES[0]
-    active_battles[user.id] = {
-        "enemy_idx": 0,
-        "enemy_hp": enemy["hp"]
-    }
-    
     text = f"🌀 *Добро пожаловать, {user.first_name}!*\n\n"
     text += get_player_stats_text(player)
-    text += f"\n\n*Твой противник:*\n{get_enemy_text(enemy, enemy['hp'])}"
+    text += "\n\n*Выбери действие:*"
     
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
 
@@ -187,27 +300,79 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     data = query.data
     
-    # Получаем данные игрока из БД
-    player_data = await get_or_create_player(user_id, update.effective_user.first_name)
+    player = await get_or_create_player(user_id, update.effective_user.first_name)
     
-    # Получаем текущего врага
-    battle = active_battles.get(user_id)
-    if not battle:
-        battle = {"enemy_idx": 0, "enemy_hp": ENEMIES[0]["hp"]}
-        active_battles[user_id] = battle
+    # === КВЕСТЫ (список) ===
+    if data == "quests":
+        await query.edit_message_text("📜 *Выбери квеста:*", parse_mode="Markdown", reply_markup=get_quests_keyboard())
+        return
     
-    enemy = ENEMIES[battle["enemy_idx"]]
-    enemy_hp = battle["enemy_hp"]
+    # === НАЧАТЬ КВЕСТ ===
+    if data.startswith("quest_"):
+        quest_id = int(data.split("_")[1])
+        quest = QUESTS[quest_id]
+        
+        active_battles[user_id] = {
+            "type": "quest",
+            "enemy": quest.copy(),
+            "enemy_hp": quest["hp"]
+        }
+        
+        text = f"⚔️ *{quest['name']}*\n❤️ {quest['hp']}/{quest['hp']} HP\n⚔️ Атака: {quest['atk']}\n\n💰 Награда: {quest['gold']} золота, {quest['xp']} опыта, {quest['glory']} славы\n🔑 Шанс ключа: {int(quest['key_chance']*100)}%\n📦 Шанс материала: {int(quest['materials'][0]['chance']*100)}%"
+        
+        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
+        return
     
-    # ===== АТАКА =====
+    # === ЭЛИТНЫЕ БОССЫ ===
+    if data == "elite_bosses":
+        await query.edit_message_text("👑 *Элитные боссы (нужны ключи):*", parse_mode="Markdown", reply_markup=get_elite_keyboard(player))
+        return
+    
+    if data.startswith("elite_"):
+        boss_id = int(data.split("_")[1])
+        boss = ELITE_BOSSES[boss_id]
+        
+        # Проверяем ключ
+        keys = player.get("keys", {})
+        if keys.get(boss["need_key"], 0) <= 0:
+            await query.answer(f"❌ Нужен {boss['need_key']}!", show_alert=True)
+            return
+        
+        # Используем ключ
+        keys[boss["need_key"]] -= 1
+        if keys[boss["need_key"]] == 0:
+            del keys[boss["need_key"]]
+        player["keys"] = keys
+        await save_player(user_id, player)
+        
+        active_battles[user_id] = {
+            "type": "elite",
+            "enemy": boss.copy(),
+            "enemy_hp": boss["hp"]
+        }
+        
+        text = f"⚔️ *ЭЛИТНЫЙ БОСС: {boss['name']}*\n❤️ {boss['hp']}/{boss['hp']} HP\n⚔️ Атака: {boss['atk']}\n\n💰 Награда: {boss['gold']} золота, {boss['xp']} опыта, {boss['glory']} славы\n📦 Материалы: {', '.join([f'{m["name"]} x{m["qty"]}' for m in boss['materials']])}"
+        
+        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
+        return
+    
+    # === АТАКА ===
     if data == "attack":
+        battle = active_battles.get(user_id)
+        if not battle:
+            await query.edit_message_text("❌ Нет активного боя! Начни квест или босса.", reply_markup=get_main_keyboard())
+            return
+        
+        enemy = battle["enemy"]
+        enemy_hp = battle["enemy_hp"]
+        
         if enemy_hp <= 0:
-            await query.edit_message_text("❌ Враг уже побеждён! Нажми «СМЕНА ВРАГА»", reply_markup=get_back_keyboard())
+            await query.edit_message_text("❌ Враг уже побеждён!", reply_markup=get_back_keyboard())
             return
         
         # Игрок атакует
-        dmg = get_player_damage(player_data)
-        is_crit = random.random() < get_crit_chance(player_data)
+        dmg = get_player_damage(player)
+        is_crit = random.random() < get_crit_chance(player)
         if is_crit:
             dmg = int(dmg * 1.7)
         
@@ -226,212 +391,245 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             glory_gain = enemy["glory"]
             xp_gain = enemy["xp"]
             
-            player_data["gold"] = player_data.get("gold", 0) + gold_gain
-            player_data["glory"] = player_data.get("glory", 0) + glory_gain
-            player_data["xp"] = player_data.get("xp", 0) + xp_gain
+            player["gold"] = player.get("gold", 0) + gold_gain
+            player["glory"] = player.get("glory", 0) + glory_gain
+            player["xp"] = player.get("xp", 0) + xp_gain
+            
+            # Выпадение ключа (только для квестов)
+            if battle["type"] == "quest" and "key" in enemy:
+                if random.random() < enemy["key_chance"]:
+                    keys = player.get("keys", {})
+                    keys[enemy["key"]] = keys.get(enemy["key"], 0) + 1
+                    player["keys"] = keys
+                    result_text += f"🔑 Выпал *{enemy['key']}*!\n"
+            
+            # Выпадение материалов
+            if "materials" in enemy:
+                mats = player.get("materials", {})
+                for mat in enemy["materials"]:
+                    if random.random() < mat.get("chance", 1.0):
+                        mats[mat["name"]] = mats.get(mat["name"], 0) + mat["qty"]
+                        result_text += f"📦 Выпал *{mat['name']}* x{mat['qty']}!\n"
+                player["materials"] = mats
             
             # Проверка уровня
-            need_xp = 100 + player_data.get("level", 1) * 15
+            need_xp = 100 + player.get("level", 1) * 15
             level_up = False
-            while player_data["xp"] >= need_xp:
-                player_data["level"] += 1
-                player_data["xp"] -= need_xp
-                player_data["max_hp"] += 20
-                player_data["talent_points"] = player_data.get("talent_points", 0) + 1
-                need_xp = 100 + player_data["level"] * 15
+            while player["xp"] >= need_xp:
+                player["level"] += 1
+                player["xp"] -= need_xp
+                player["max_hp"] += 20
+                player["talent_points"] = player.get("talent_points", 0) + 1
+                need_xp = 100 + player["level"] * 15
                 level_up = True
             
-            # Восстанавливаем HP до нового максимума
-            player_data["hp"] = get_max_hp(player_data)
-            await save_player(user_id, player_data)
+            player["hp"] = get_max_hp(player)
+            await save_player(user_id, player)
             
-            result_text += f"🏆 *ПОБЕДА!*\n"
-            result_text += f"+{gold_gain}💰 +{glory_gain}✨ +{xp_gain}⭐ опыта\n"
+            result_text += f"\n🏆 *ПОБЕДА!*\n+{gold_gain}💰 +{glory_gain}✨ +{xp_gain}⭐\n"
             if level_up:
-                result_text += f"✨ *УРОВЕНЬ {player_data['level']}!* +1 очко талантов ✨\n"
-            result_text += f"\nНажми «СМЕНА ВРАГА» для продолжения!"
+                result_text += f"✨ *УРОВЕНЬ {player['level']}!* +1 очко талантов ✨\n"
             
-            await query.edit_message_text(result_text, parse_mode="Markdown", reply_markup=get_back_keyboard())
+            del active_battles[user_id]
+            await query.edit_message_text(result_text, parse_mode="Markdown", reply_markup=get_main_keyboard())
             return
         
-        # Враг атакует в ответ
-        enemy_dmg = random.randint(enemy["atk"] - 10, enemy["atk"] + 5)
+        # Враг атакует
+        enemy_dmg = random.randint(enemy["atk"] - 8, enemy["atk"] + 4)
         enemy_dmg = max(5, enemy_dmg)
         
-        player_hp = player_data.get("hp", get_max_hp(player_data))
+        player_hp = player.get("hp", get_max_hp(player))
         player_hp -= enemy_dmg
-        player_data["hp"] = max(0, player_hp)
-        await save_player(user_id, player_data)
+        player["hp"] = max(0, player_hp)
+        await save_player(user_id, player)
         
         result_text += f"😈 *{enemy['name']}* атакует и наносит *{enemy_dmg}* урона!\n"
         
         if player_hp <= 0:
             result_text += f"\n💀 *ТЫ ПОВЕРЖЕН!*\nВосстановлен в таверне за 15% золота."
-            player_data["hp"] = get_max_hp(player_data)
-            player_data["gold"] = max(300, int(player_data.get("gold", 0) * 0.85))
-            await save_player(user_id, player_data)
+            player["hp"] = get_max_hp(player)
+            player["gold"] = max(300, int(player.get("gold", 0) * 0.85))
+            await save_player(user_id, player)
+            del active_battles[user_id]
+            await query.edit_message_text(result_text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+            return
         
-        # Обновляем текст
-        player_data["hp"] = player_hp
-        text = result_text + "\n" + get_player_stats_text(player_data)
-        text += f"\n\n*Твой противник:*\n{get_enemy_text(enemy, enemy_hp)}"
-        
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+        # Продолжаем бой
+        text = result_text + f"\n*{enemy['name']}*\n❤️ {battle['enemy_hp']}/{enemy['hp']} HP\n\n"
+        text += get_player_stats_text(player)
+        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
+        return
     
-    # ===== ЛЕЧЕНИЕ =====
-    elif data == "heal":
+    # === ЛЕЧЕНИЕ ===
+    if data == "heal":
         cost = 45
-        gold = player_data.get("gold", 0)
-        max_hp = get_max_hp(player_data)
-        current_hp = player_data.get("hp", max_hp)
+        gold = player.get("gold", 0)
+        max_hp = get_max_hp(player)
+        current_hp = player.get("hp", max_hp)
         
         if gold >= cost and current_hp < max_hp:
             heal_amount = 48
             new_hp = min(max_hp, current_hp + heal_amount)
-            player_data["hp"] = new_hp
-            player_data["gold"] = gold - cost
-            await save_player(user_id, player_data)
+            player["hp"] = new_hp
+            player["gold"] = gold - cost
+            await save_player(user_id, player)
             
-            text = f"💚 Восстановлено *{heal_amount}* HP! -{cost}💰\n\n"
-            text += get_player_stats_text(player_data)
-            text += f"\n\n*Твой противник:*\n{get_enemy_text(enemy, enemy_hp)}"
-            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+            battle = active_battles.get(user_id)
+            if battle:
+                text = f"💚 Восстановлено *{heal_amount}* HP! -{cost}💰\n\n*{battle['enemy']['name']}*\n❤️ {battle['enemy_hp']}/{battle['enemy']['hp']} HP\n\n"
+                text += get_player_stats_text(player)
+                await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
+            else:
+                await query.edit_message_text(f"💚 Восстановлено *{heal_amount}* HP! -{cost}💰\n\n{get_player_stats_text(player)}", parse_mode="Markdown", reply_markup=get_main_keyboard())
         else:
-            error = "❌ Не хватает золота или HP полное!"
-            text = error + "\n\n" + get_player_stats_text(player_data)
-            text += f"\n\n*Твой противник:*\n{get_enemy_text(enemy, enemy_hp)}"
-            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+            await query.answer("❌ Не хватает золота или HP полное!", show_alert=True)
+        return
     
-    # ===== ЗАТОЧКА ОРУЖИЯ =====
-    elif data == "upgrade":
-        upgrade_level = player_data.get("weapon_upgrade", 0)
-        if upgrade_level >= 12:
-            await query.edit_message_text("🔨 Оружие уже заточено до +12! Максимум.", reply_markup=get_back_keyboard())
-            return
-        
-        cost = 300 + upgrade_level * 120
-        gold = player_data.get("gold", 0)
-        
-        if gold < cost:
-            await query.edit_message_text(f"❌ Не хватает {cost} золота для заточки!", reply_markup=get_back_keyboard())
-            return
-        
-        chance = max(0.3, 0.85 - upgrade_level * 0.045)
-        
-        if random.random() < chance:
-            player_data["weapon_upgrade"] = upgrade_level + 1
-            player_data["gold"] = gold - cost
-            await save_player(user_id, player_data)
-            text = f"✅ *УСПЕХ!* Оружие +{upgrade_level + 1} (урон +{(upgrade_level + 1) * 5})\n\n"
-            text += get_player_stats_text(player_data)
-            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
-        else:
-            lost = int(cost * 0.5)
-            player_data["gold"] = gold - lost
-            await save_player(user_id, player_data)
-            text = f"💥 *ПРОВАЛ ЗАТОЧКИ!* Потеряно {lost} золота. Оружие не сломалось.\n\n"
-            text += get_player_stats_text(player_data)
-            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+    # === СДАЧА ===
+    if data == "surrender":
+        if user_id in active_battles:
+            del active_battles[user_id]
+        await query.edit_message_text("🚪 Ты сдался и вернулся в город.", reply_markup=get_main_keyboard())
+        return
     
-    # ===== СМЕНА ВРАГА =====
-    elif data == "next_enemy":
-        new_idx = (battle["enemy_idx"] + 1) % len(ENEMIES)
-        new_enemy = ENEMIES[new_idx]
-        battle["enemy_idx"] = new_idx
-        battle["enemy_hp"] = new_enemy["hp"]
-        active_battles[user_id] = battle
-        
-        text = f"🌀 Новый противник!\n\n"
-        text += get_player_stats_text(player_data)
-        text += f"\n\n*Твой противник:*\n{get_enemy_text(new_enemy, new_enemy['hp'])}"
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
-    
-    # ===== МАГАЗИН =====
-    elif data == "shop":
-        text = "*🏪 ОРУЖЕЙНАЯ МАСТЕРА*\n\n"
-        text += get_player_stats_text(player_data)
+    # === МАГАЗИН ===
+    if data == "shop":
+        text = "*🏪 ОРУЖЕЙНАЯ МАСТЕРА*\n\n" + get_player_stats_text(player)
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_shop_keyboard())
+        return
     
-    elif data.startswith("buy_"):
+    if data.startswith("buy_"):
         weapon_idx = int(data.split("_")[1])
         weapon = WEAPONS[weapon_idx]
-        current_idx = WEAPONS.index(next((w for w in WEAPONS if w["name"] == player_data.get("weapon_name", "")), WEAPONS[0]))
+        current_name = player.get("weapon_name", "")
+        current_idx = next((i for i, w in enumerate(WEAPONS) if w["name"] == current_name), 0)
         
         if weapon_idx <= current_idx:
             await query.answer("❌ Это оружие слабее или такое же!", show_alert=True)
             return
         
-        if player_data.get("gold", 0) >= weapon["cost"]:
-            player_data["gold"] -= weapon["cost"]
-            player_data["weapon_name"] = weapon["name"]
-            player_data["weapon_dmg"] = weapon["dmg"]
-            await save_player(user_id, player_data)
-            text = f"✅ Куплено: *{weapon['name']}* +{weapon['dmg']} урона!\n\n"
-            text += get_player_stats_text(player_data)
+        if player.get("gold", 0) >= weapon["cost"]:
+            player["gold"] -= weapon["cost"]
+            player["weapon_name"] = weapon["name"]
+            player["weapon_dmg"] = weapon["dmg"]
+            await save_player(user_id, player)
+            text = f"✅ Куплено: *{weapon['name']}* +{weapon['dmg']} урона!\n\n" + get_player_stats_text(player)
             await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_shop_keyboard())
         else:
             await query.answer("❌ Не хватает золота!", show_alert=True)
+        return
     
-    # ===== ТАЛАНТЫ =====
-    elif data == "talents":
-        text = f"*⭐ ДРЕВО ТАЛАНТОВ*\nОчков: {player_data.get('talent_points', 0)}\n\n"
-        text += f"💪 СИЛА: +{player_data.get('talent_dmg', 0) * 4} урона\n"
-        text += f"🎯 МЕТКОСТЬ: +{player_data.get('talent_crit', 0) * 2.5:.0f}% крита\n"
-        text += f"❤️ ЖИВУЧЕСТЬ: +{player_data.get('talent_hp', 0) * 5}% HP\n\n"
-        text += get_player_stats_text(player_data)
+    # === ТАЛАНТЫ ===
+    if data == "talents":
+        text = f"*⭐ ДРЕВО ТАЛАНТОВ*\nОчков: {player.get('talent_points', 0)}\n\n"
+        text += f"💪 СИЛА: +{player.get('talent_dmg', 0) * 4} урона\n"
+        text += f"🎯 МЕТКОСТЬ: +{player.get('talent_crit', 0) * 2.5:.0f}% крита\n"
+        text += f"❤️ ЖИВУЧЕСТЬ: +{player.get('talent_hp', 0) * 5}% HP\n\n"
+        text += get_player_stats_text(player)
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_talents_keyboard())
+        return
     
-    elif data.startswith("talent_"):
+    if data.startswith("talent_"):
         talent_type = data.split("_")[1]
-        points = player_data.get("talent_points", 0)
+        points = player.get("talent_points", 0)
         
         if points <= 0:
             await query.answer("❌ Нет очков талантов!", show_alert=True)
             return
         
         if talent_type == "dmg":
-            player_data["talent_dmg"] = player_data.get("talent_dmg", 0) + 1
+            player["talent_dmg"] = player.get("talent_dmg", 0) + 1
         elif talent_type == "crit":
-            player_data["talent_crit"] = player_data.get("talent_crit", 0) + 1
+            player["talent_crit"] = player.get("talent_crit", 0) + 1
         elif talent_type == "hp":
-            player_data["talent_hp"] = player_data.get("talent_hp", 0) + 1
+            player["talent_hp"] = player.get("talent_hp", 0) + 1
         
-        player_data["talent_points"] = points - 1
-        await save_player(user_id, player_data)
+        player["talent_points"] = points - 1
+        await save_player(user_id, player)
         
-        text = f"✅ Талант улучшен!\n\n"
-        text += get_player_stats_text(player_data)
-        text += f"\n\n*Твой противник:*\n{get_enemy_text(enemy, enemy_hp)}"
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+        text = f"✅ Талант улучшен!\n\n" + get_player_stats_text(player)
+        battle = active_battles.get(user_id)
+        if battle:
+            text += f"\n\n*{battle['enemy']['name']}*\n❤️ {battle['enemy_hp']}/{battle['enemy']['hp']} HP"
+            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
+        else:
+            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+        return
     
-    # ===== СТАТЫ =====
-    elif data == "stats":
-        text = get_player_stats_text(player_data)
-        text += f"\n\n*Твой противник:*\n{get_enemy_text(enemy, enemy_hp)}"
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+    # === СТАТЫ ===
+    if data == "stats":
+        text = get_player_stats_text(player)
+        battle = active_battles.get(user_id)
+        if battle:
+            text += f"\n\n*{battle['enemy']['name']}*\n❤️ {battle['enemy_hp']}/{battle['enemy']['hp']} HP"
+            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
+        else:
+            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+        return
     
-    # ===== ТОП ИГРОКОВ =====
-    elif data == "top":
+    # === ТОП ===
+    if data == "top":
         response = supabase.table("players").select("name, glory, level, gold").order("glory", desc=True).limit(10).execute()
         text = "*🏆 ТОП-10 ПО СЛАВЕ 🏆*\n\n"
         for i, p in enumerate(response.data):
             text += f"{i+1}. {p.get('name', 'Unknown')} — ✨{p.get('glory', 0)} | Ур.{p.get('level', 1)} | 🪙{p.get('gold', 0)}\n"
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_back_keyboard())
+        return
     
-    # ===== НАЗАД =====
-    elif data == "back":
-        text = get_player_stats_text(player_data)
-        text += f"\n\n*Твой противник:*\n{get_enemy_text(enemy, enemy_hp)}"
-        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+    # === ЗАТОЧКА ===
+    if data == "upgrade":
+        upgrade_level = player.get("weapon_upgrade", 0)
+        if upgrade_level >= 12:
+            await query.answer("🔨 Оружие уже заточено до +12!", show_alert=True)
+            return
+        
+        cost = 300 + upgrade_level * 120
+        gold = player.get("gold", 0)
+        
+        if gold < cost:
+            await query.answer(f"❌ Не хватает {cost} золота!", show_alert=True)
+            return
+        
+        chance = max(0.3, 0.85 - upgrade_level * 0.045)
+        
+        if random.random() < chance:
+            player["weapon_upgrade"] = upgrade_level + 1
+            player["gold"] = gold - cost
+            await save_player(user_id, player)
+            text = f"✅ *УСПЕХ!* Оружие +{upgrade_level + 1}\n\n" + get_player_stats_text(player)
+        else:
+            lost = int(cost * 0.5)
+            player["gold"] = gold - lost
+            await save_player(user_id, player)
+            text = f"💥 *ПРОВАЛ!* Потеряно {lost} золота.\n\n" + get_player_stats_text(player)
+        
+        battle = active_battles.get(user_id)
+        if battle:
+            text += f"\n\n*{battle['enemy']['name']}*\n❤️ {battle['enemy_hp']}/{battle['enemy']['hp']} HP"
+            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
+        else:
+            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+        return
+    
+    # === НАЗАД ===
+    if data == "back":
+        text = get_player_stats_text(player)
+        battle = active_battles.get(user_id)
+        if battle:
+            text += f"\n\n*{battle['enemy']['name']}*\n❤️ {battle['enemy_hp']}/{battle['enemy']['hp']} HP"
+            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
+        else:
+            await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
 
-# ========== ЗАПУСК БОТА ==========
+# ========== ЗАПУСК ==========
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("админ", admin_command))
     app.add_handler(CallbackQueryHandler(handle_callback))
     
-    print("🎮 Бот запущен! Найди его в Telegram: @")
+    print("🎮 Бот запущен! Найди его в Telegram")
     app.run_polling()
 
 if __name__ == "__main__":
