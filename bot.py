@@ -11,7 +11,7 @@ BOT_TOKEN = "8858271245:AAHMRubTDf_-_cmraJyW18Ka6w4VpDSP_JQ"
 SUPABASE_URL = "https://tmjqafqecjpizawdruzq.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtanFhZnFlY2pwaXphd2RydXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4OTk2OTYsImV4cCI6MjA5NTQ3NTY5Nn0.8K7i5QEbjYWSvqw78P8RSR_abYM8uCRZbvC9Hp12bac"
 
-# Админ (твой Telegram ID или username)
+# Админ (твой Telegram username)
 ADMIN_USERNAME = "cursed_pharaon"
 
 logging.basicConfig(level=logging.INFO)
@@ -84,8 +84,9 @@ async def get_or_create_player(user_id: int, username: str):
             "talent_crit": 0,
             "talent_hp": 0,
             "talent_points": 1,
-            "keys": {},  # JSON поле для ключей
-            "materials": {}  # JSON поле для материалов
+            "keys": {},
+            "materials": {},
+            "armor": 0
         }
         supabase.table("players").insert(new_player).execute()
         return new_player
@@ -204,7 +205,7 @@ def get_back_keyboard():
 # ========== АДМИН-КОМАНДЫ ==========
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user.username != ADMIN_USERNAME and user.username != "cursed_pharaon":
+    if user.username != ADMIN_USERNAME:
         await update.message.reply_text("❌ У вас нет прав администратора!")
         return
     
@@ -215,9 +216,7 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     cmd = args[0].lower()
     target_name = args[1]
-    value = args[2]
     
-    # Получаем игрока
     response = supabase.table("players").select("*").eq("username", target_name).execute()
     if not response.data:
         await update.message.reply_text(f"❌ Игрок {target_name} не найден!")
@@ -227,47 +226,50 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         if cmd == "лвл":
-            new_level = int(value)
+            new_level = int(args[2])
             player["level"] = new_level
             player["max_hp"] = 210 + (new_level - 1) * 20
             player["hp"] = player["max_hp"]
             await update.message.reply_text(f"✅ Игроку {target_name} установлен уровень {new_level}")
         
         elif cmd == "голд":
-            player["gold"] = int(value)
-            await update.message.reply_text(f"✅ Игроку {target_name} установлено золото {value}")
+            player["gold"] = int(args[2])
+            await update.message.reply_text(f"✅ Игроку {target_name} установлено золото {args[2]}")
         
         elif cmd == "слава":
-            player["glory"] = int(value)
-            await update.message.reply_text(f"✅ Игроку {target_name} установлена слава {value}")
+            player["glory"] = int(args[2])
+            await update.message.reply_text(f"✅ Игроку {target_name} установлена слава {args[2]}")
         
         elif cmd == "хп":
-            player["hp"] = int(value)
-            player["max_hp"] = int(value)
-            await update.message.reply_text(f"✅ Игроку {target_name} установлено HP {value}")
+            player["hp"] = int(args[2])
+            player["max_hp"] = int(args[2])
+            await update.message.reply_text(f"✅ Игроку {target_name} установлено HP {args[2]}")
         
         elif cmd == "урон":
-            player["weapon_dmg"] = int(value)
-            await update.message.reply_text(f"✅ Игроку {target_name} установлен урон оружия {value}")
+            player["weapon_dmg"] = int(args[2])
+            await update.message.reply_text(f"✅ Игроку {target_name} установлен урон оружия {args[2]}")
         
         elif cmd == "броня":
-            # Добавляем поле armor если нет
-            player["armor"] = int(value)
-            await update.message.reply_text(f"✅ Игроку {target_name} установлена броня {value}")
+            player["armor"] = int(args[2])
+            await update.message.reply_text(f"✅ Игроку {target_name} установлена броня {args[2]}")
         
         elif cmd == "ключ":
-            # /админ ключ username Ключ_название 5
+            if len(args) < 4:
+                await update.message.reply_text("❌ Использование: /админ ключ username Название_ключа 5")
+                return
             key_name = args[2]
-            key_qty = int(args[3]) if len(args) > 3 else 1
+            key_qty = int(args[3])
             keys = player.get("keys", {})
             keys[key_name] = keys.get(key_name, 0) + key_qty
             player["keys"] = keys
             await update.message.reply_text(f"✅ Игроку {target_name} добавлен ключ {key_name} x{key_qty}")
         
         elif cmd == "материал":
-            # /админ материал username Название 5
+            if len(args) < 4:
+                await update.message.reply_text("❌ Использование: /админ материал username Название_материала 5")
+                return
             mat_name = args[2]
-            mat_qty = int(args[3]) if len(args) > 3 else 1
+            mat_qty = int(args[3])
             mats = player.get("materials", {})
             mats[mat_name] = mats.get(mat_name, 0) + mat_qty
             player["materials"] = mats
@@ -277,7 +279,6 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Неизвестная команда. Доступно: лвл, голд, слава, хп, урон, броня, ключ, материал")
             return
         
-        # Сохраняем изменения
         supabase.table("players").update(player).eq("username", target_name).execute()
         
     except Exception as e:
@@ -302,12 +303,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     player = await get_or_create_player(user_id, update.effective_user.first_name)
     
-    # === КВЕСТЫ (список) ===
+    # КВЕСТЫ (список)
     if data == "quests":
         await query.edit_message_text("📜 *Выбери квеста:*", parse_mode="Markdown", reply_markup=get_quests_keyboard())
         return
     
-    # === НАЧАТЬ КВЕСТ ===
+    # НАЧАТЬ КВЕСТ
     if data.startswith("quest_"):
         quest_id = int(data.split("_")[1])
         quest = QUESTS[quest_id]
@@ -323,22 +324,21 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
         return
     
-    # === ЭЛИТНЫЕ БОССЫ ===
+    # ЭЛИТНЫЕ БОССЫ (список)
     if data == "elite_bosses":
         await query.edit_message_text("👑 *Элитные боссы (нужны ключи):*", parse_mode="Markdown", reply_markup=get_elite_keyboard(player))
         return
     
+    # НАЧАТЬ ЭЛИТНОГО БОССА
     if data.startswith("elite_"):
         boss_id = int(data.split("_")[1])
         boss = ELITE_BOSSES[boss_id]
         
-        # Проверяем ключ
         keys = player.get("keys", {})
         if keys.get(boss["need_key"], 0) <= 0:
             await query.answer(f"❌ Нужен {boss['need_key']}!", show_alert=True)
             return
         
-        # Используем ключ
         keys[boss["need_key"]] -= 1
         if keys[boss["need_key"]] == 0:
             del keys[boss["need_key"]]
@@ -351,13 +351,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "enemy_hp": boss["hp"]
         }
         
-        materials_text = ', '.join([f"{m['name']} x{m['qty']}" for m in boss['materials']])
-    text = f"⚔️ *ЭЛИТНЫЙ БОСС: {boss['name']}*\n❤️ {boss['hp']}/{boss['hp']} HP\n⚔️ Атака: {boss['atk']}\n\n💰 Награда: {boss['gold']} золота, {boss['xp']} опыта, {boss['glory']} славы\n📦 Материалы: {materials_text}"
+        materials_text = ", ".join([f"{m['name']} x{m['qty']}" for m in boss['materials']])
+        text = f"⚔️ *ЭЛИТНЫЙ БОСС: {boss['name']}*\n❤️ {boss['hp']}/{boss['hp']} HP\n⚔️ Атака: {boss['atk']}\n\n💰 Награда: {boss['gold']} золота, {boss['xp']} опыта, {boss['glory']} славы\n📦 Материалы: {materials_text}"
         
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
         return
     
-    # === АТАКА ===
+    # АТАКА
     if data == "attack":
         battle = active_battles.get(user_id)
         if not battle:
@@ -371,7 +371,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("❌ Враг уже побеждён!", reply_markup=get_back_keyboard())
             return
         
-        # Игрок атакует
         dmg = get_player_damage(player)
         is_crit = random.random() < get_crit_chance(player)
         if is_crit:
@@ -385,9 +384,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             result_text += " *КРИТИЧЕСКИЙ УДАР!*"
         result_text += "!\n\n"
         
-        # Проверка победы
         if enemy_hp <= 0:
-            # Награда
             gold_gain = enemy["gold"] + random.randint(0, 50)
             glory_gain = enemy["glory"]
             xp_gain = enemy["xp"]
@@ -396,7 +393,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             player["glory"] = player.get("glory", 0) + glory_gain
             player["xp"] = player.get("xp", 0) + xp_gain
             
-            # Выпадение ключа (только для квестов)
             if battle["type"] == "quest" and "key" in enemy:
                 if random.random() < enemy["key_chance"]:
                     keys = player.get("keys", {})
@@ -404,7 +400,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     player["keys"] = keys
                     result_text += f"🔑 Выпал *{enemy['key']}*!\n"
             
-            # Выпадение материалов
             if "materials" in enemy:
                 mats = player.get("materials", {})
                 for mat in enemy["materials"]:
@@ -413,7 +408,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         result_text += f"📦 Выпал *{mat['name']}* x{mat['qty']}!\n"
                 player["materials"] = mats
             
-            # Проверка уровня
             need_xp = 100 + player.get("level", 1) * 15
             level_up = False
             while player["xp"] >= need_xp:
@@ -435,7 +429,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(result_text, parse_mode="Markdown", reply_markup=get_main_keyboard())
             return
         
-        # Враг атакует
         enemy_dmg = random.randint(enemy["atk"] - 8, enemy["atk"] + 4)
         enemy_dmg = max(5, enemy_dmg)
         
@@ -455,13 +448,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(result_text, parse_mode="Markdown", reply_markup=get_main_keyboard())
             return
         
-        # Продолжаем бой
         text = result_text + f"\n*{enemy['name']}*\n❤️ {battle['enemy_hp']}/{enemy['hp']} HP\n\n"
         text += get_player_stats_text(player)
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
         return
     
-    # === ЛЕЧЕНИЕ ===
+    # ЛЕЧЕНИЕ
     if data == "heal":
         cost = 45
         gold = player.get("gold", 0)
@@ -486,14 +478,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("❌ Не хватает золота или HP полное!", show_alert=True)
         return
     
-    # === СДАЧА ===
+    # СДАЧА
     if data == "surrender":
         if user_id in active_battles:
             del active_battles[user_id]
         await query.edit_message_text("🚪 Ты сдался и вернулся в город.", reply_markup=get_main_keyboard())
         return
     
-    # === МАГАЗИН ===
+    # МАГАЗИН
     if data == "shop":
         text = "*🏪 ОРУЖЕЙНАЯ МАСТЕРА*\n\n" + get_player_stats_text(player)
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_shop_keyboard())
@@ -520,7 +512,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("❌ Не хватает золота!", show_alert=True)
         return
     
-    # === ТАЛАНТЫ ===
+    # ТАЛАНТЫ
     if data == "talents":
         text = f"*⭐ ДРЕВО ТАЛАНТОВ*\nОчков: {player.get('talent_points', 0)}\n\n"
         text += f"💪 СИЛА: +{player.get('talent_dmg', 0) * 4} урона\n"
@@ -557,7 +549,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
         return
     
-    # === СТАТЫ ===
+    # СТАТЫ
     if data == "stats":
         text = get_player_stats_text(player)
         battle = active_battles.get(user_id)
@@ -568,7 +560,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
         return
     
-    # === ТОП ===
+    # ТОП
     if data == "top":
         response = supabase.table("players").select("name, glory, level, gold").order("glory", desc=True).limit(10).execute()
         text = "*🏆 ТОП-10 ПО СЛАВЕ 🏆*\n\n"
@@ -577,7 +569,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_back_keyboard())
         return
     
-    # === ЗАТОЧКА ===
+    # ЗАТОЧКА
     if data == "upgrade":
         upgrade_level = player.get("weapon_upgrade", 0)
         if upgrade_level >= 12:
@@ -612,7 +604,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
         return
     
-    # === НАЗАД ===
+    # НАЗАД
     if data == "back":
         text = get_player_stats_text(player)
         battle = active_battles.get(user_id)
@@ -621,6 +613,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_battle_keyboard())
         else:
             await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
+        return
 
 # ========== ЗАПУСК ==========
 def main():
@@ -630,7 +623,7 @@ def main():
     app.add_handler(CommandHandler("админ", admin_command))
     app.add_handler(CallbackQueryHandler(handle_callback))
     
-    print("🎮 Бот запущен! Найди его в Telegram")
+    print("🎮 Бот запущен!")
     app.run_polling()
 
 if __name__ == "__main__":
