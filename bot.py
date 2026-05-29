@@ -620,7 +620,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("админ", admin_command))
+    app.add_handler(CommandHandler("admin", admin_command))  # ← изменил на admin
     app.add_handler(CallbackQueryHandler(handle_callback))
     
     print("🎮 Бот запущен!")
