@@ -615,6 +615,21 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(text, parse_mode="Markdown", reply_markup=get_main_keyboard())
         return
 
+# ========== HEALTHCHECK ДЛЯ RENDER ==========
+from flask import Flask
+import threading
+
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def health():
+    return "Bot is alive!", 200
+
+def run_flask():
+    flask_app.run(host='0.0.0.0', port=8080)
+
+# Запускаем Flask в отдельном потоке
+threading.Thread(target=run_flask, daemon=True).start()
 # ========== ЗАПУСК ==========
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
